@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app>
+
+    <display-name>GeoReports - GeoSpatial PDF Report Producer</display-name>
+
+    <!-- Proxy Servlet -->
+    <servlet>
+        <servlet-name>GeoReportServlet</servlet-name>
+        <servlet-class>georeports.GeoReportServlet</servlet-class>
+    </servlet>
+
+    <!--
+    <servlet-mapping>
+        <servlet-name>GeoReportServlet</servlet-name>
+        <url-pattern>/georeport/*</url-pattern>
+    </servlet-mapping>
+    -->
+
+
+    <!-- Default page to serve -->
+    <welcome-file-list>
+        <welcome-file>index.html</welcome-file>
+    </welcome-file-list>
+
+    <security-constraint>
+        <web-resource-collection>
+            <web-resource-name>Protected Files</web-resource-name>
+            <url-pattern>*.config</url-pattern>
+            <url-pattern>*.properties</url-pattern>
+        </web-resource-collection>
+        <auth-constraint />
+    </security-constraint>
+
+</web-app>

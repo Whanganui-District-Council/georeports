@@ -1,0 +1,4 @@
+Manifest-Version: 1.0
+Main-Class: georeports.GeoReportServlet
+Class-Path: javax.servlet-api-4.0.0.jar openpdf-2.0.5.jar
+

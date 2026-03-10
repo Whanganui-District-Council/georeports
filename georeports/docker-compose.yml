@@ -1,0 +1,36 @@
+services:
+  georeports:
+    cpu_count: 4
+    restart: always
+    build: .
+    container_name: georeports_ubuntu_tomcat_gdal
+    ports:
+      - "8087:8080"
+    extra_hosts:
+      - "wdc-gisdb1:192.168.2.42"
+      - "dockerhost:192.168.0.223"
+    environment:
+      - JAVA_HOME=/opt/java/openjdk
+      - LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib/jni
+      - CATALINA_OPTS=-Djava.library.path=/usr/local/lib:/usr/local/lib/jni
+      - GDAL_DATA=/usr/share/gdal
+      - CONFIGURATION_PATH=/data/georeports-data/
+
+    volumes:
+        - /data/georeports-data:/data/georeports-data
+
+    # --- Health Check ---
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://0.0.0.0:8080/georeports/" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+    # --- Logging Limits ---
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"   # Rotate logs once they reach 10MB
+        max-file: "3"     # Keep only the 3 most recent log files
+
