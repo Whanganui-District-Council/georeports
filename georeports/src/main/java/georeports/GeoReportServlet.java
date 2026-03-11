@@ -2816,40 +2816,103 @@ public class GeoReportServlet extends HttpServlet {
     }
 
     private Font setFontStylesFromQPT(Object object) throws XPathExpressionException, IOException {
-        //Font description. e.g. Arial,14,-1,5,75,0,0,0,0,0
-        String dataTableFontDescription = getXpathString("LabelFont/@description", object);
-        String[] splitResult;
-        splitResult = dataTableFontDescription.split(",");
+        if (getXpathNode("text-style",object) != null) {
+            //New QGIS format
+            //  <text-style fontItalic="0" fontFamily="Arial" forcedItalic="0" tabStopDistanceUnit="Percentage" fontWeight="75" textOrientation="horizontal" namedStyle="Bold" stretchFactor="100" capitalization="0" fontSize="9" fontStrikeout="0" fontLetterSpacing="0" textOpacity="1" previewBkgrdColor="255,255,255,255,rgb:1,1,1,1" multilineHeight="1" fontSizeUnit="Point" allowHtml="0" forcedBold="0" fontSizeMapUnitScale="3x:0,0,0,0,0,0" tabStopDistance="6" textColor="0,0,0,255,rgb:0,0,0,1" blendMode="0" multilineHeightUnit="Percentage" fontWordSpacing="0" tabStopDistanceMapUnitScale="3x:0,0,0,0,0,0" fontKerning="1" fontUnderline="0">
 
-        String dataTableFontName = splitResult[0];
-        float fontSize = Float.parseFloat(splitResult[1]);
-        int fontStyle = getFontStyle(splitResult);
+            String qptFontFamily = getXpathString("text-style/@fontFamily", object);
+            String qptFontWeight = getXpathString("text-style/@fontWeight", object);
+            String qptFontItalic = getXpathString("text-style/@fontItalic", object);
+            int fontStyle = getFontStyle(qptFontWeight,qptFontItalic);
+            String qptFontSize = getXpathString("text-style/@fontSize", object);
+            float fontSize = Float.parseFloat(qptFontSize);
 
-        String ttf = "/usr/share/fonts/truetype/msttcorefonts/" + dataTableFontName + ".ttf";
-        Path linuxttfpath = Paths.get(ttf);
-        Font font;
-        // check if file exists in os
-        if (Files.exists(linuxttfpath)) {
-            // Create the BaseFont (Identity-H handles Unicode encoding)
-            BaseFont bf = BaseFont.createFont(ttf, BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
-            font = new Font(bf, fontSize);
-        } else {
-            if (System.getProperty("os.name").toLowerCase().contains("linux")) {
-                //linux
-                //unknown ttf so use default
-                font = new Font(Font.HELVETICA, fontSize);
-            } else {
-                ttf = dataTableFontName.toLowerCase() + ".ttf";
+            String ttf = "/usr/share/fonts/truetype/msttcorefonts/" + qptFontFamily + ".ttf";
+            Path linuxttfpath = Paths.get(ttf);
+            Font font;
+            // check if file exists in os
+            if (Files.exists(linuxttfpath)) {
+                // Create the BaseFont (Identity-H handles Unicode encoding)
                 BaseFont bf = BaseFont.createFont(ttf, BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
                 font = new Font(bf, fontSize);
+            } else {
+                if (System.getProperty("os.name").toLowerCase().contains("linux")) {
+                    //linux
+                    //unknown ttf so use default
+                    font = new Font(Font.HELVETICA, fontSize);
+                } else {
+                    ttf = qptFontFamily.toLowerCase() + ".ttf";
+                    BaseFont bf = BaseFont.createFont(ttf, BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
+                    font = new Font(bf, fontSize);
+                }
             }
+            font.setStyle(fontStyle);
+            if (getXpathString("text-style/@textColor", object) != null) {
+                String qptTextColor= getXpathString("text-style/@textColor", object);
+                String[] splitResult;
+                splitResult = qptTextColor.split(",");
+                int r = Integer.parseInt(splitResult[0]);
+                int g = Integer.parseInt(splitResult[1]);
+                int b = Integer.parseInt(splitResult[2]);
+                font.setColor(new Color(r, g, b));
+            }
+            return font;
+        } else {
+            //old QGIS format
+            //Font description. e.g. Arial,14,-1,5,75,0,0,0,0,0
+            String dataTableFontDescription = getXpathString("LabelFont/@description", object);
+            String[] splitResult;
+            splitResult = dataTableFontDescription.split(",");
+
+            String dataTableFontName = splitResult[0];
+            float fontSize = Float.parseFloat(splitResult[1]);
+            int fontStyle = getFontStyle(splitResult);
+
+            String ttf = "/usr/share/fonts/truetype/msttcorefonts/" + dataTableFontName + ".ttf";
+            Path linuxttfpath = Paths.get(ttf);
+            Font font;
+            // check if file exists in os
+            if (Files.exists(linuxttfpath)) {
+                // Create the BaseFont (Identity-H handles Unicode encoding)
+                BaseFont bf = BaseFont.createFont(ttf, BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
+                font = new Font(bf, fontSize);
+            } else {
+                if (System.getProperty("os.name").toLowerCase().contains("linux")) {
+                    //linux
+                    //unknown ttf so use default
+                    font = new Font(Font.HELVETICA, fontSize);
+                } else {
+                    ttf = dataTableFontName.toLowerCase() + ".ttf";
+                    BaseFont bf = BaseFont.createFont(ttf, BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
+                    font = new Font(bf, fontSize);
+                }
+            }
+            font.setStyle(fontStyle);
+            if (getXpathString("FontColor", object) != null) {
+                Node nodeFontColor = getXpathNode("FontColor", object);
+                font.setColor(getRGBColorFromXPathNode(nodeFontColor));
+            }
+            return font;
         }
-        font.setStyle(fontStyle);
-        if (getXpathString("FontColor", object) != null) {
-            Node nodeFontColor = getXpathNode("FontColor", object);
-            font.setColor(getRGBColorFromXPathNode(nodeFontColor));
+
+
+    }
+
+    private int getFontStyle(String fontWeight, String fontItalic) {
+        int fontStyle = 0; //default to regular
+        if (Objects.equals(fontWeight, "50") && Objects.equals(fontItalic, "1")) {
+            //Italic;
+            fontStyle = Font.ITALIC;
         }
-        return font;
+        if (Objects.equals(fontWeight, "75") && Objects.equals(fontItalic, "0")) {
+            //Bold;
+            fontStyle = Font.BOLD;
+        }
+        if (Objects.equals(fontWeight, "75") && Objects.equals(fontItalic, "1")) {
+            //Bold | Italic;
+            fontStyle = Font.BOLDITALIC;
+        }
+        return fontStyle;
     }
 
     private int getFontStyle(String[] splitResult) {
