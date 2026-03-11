@@ -2730,7 +2730,9 @@ public class GeoReportServlet extends HttpServlet {
                     titleBorderColor = getColorFromXPathNode(nodeFrameColor);
                 }
                 if (getXpathString("@outlineWidthM", object) != null) {
-                    titleBorderWidth = Float.parseFloat(getXpathString("@outlineWidthM", object));
+                    //outlineWidthM="0.3,mm"
+                    String[] splitResult = getXpathString("@outlineWidthM", object).split(",");
+                    titleBorderWidth = Float.parseFloat(splitResult[0]);
                 }
                 break;
             case "Description":
@@ -2746,7 +2748,8 @@ public class GeoReportServlet extends HttpServlet {
                     descriptionBorderColor = getColorFromXPathNode(nodeFrameColor);
                 }
                 if (getXpathString("@outlineWidthM", object) != null) {
-                    descriptionBorderWidth = Float.parseFloat(getXpathString("@outlineWidthM", object));
+                    String[] splitResult = getXpathString("@outlineWidthM", object).split(",");
+                    descriptionBorderWidth = Float.parseFloat(splitResult[0]);
                 }
                 break;
             case "Header":
@@ -2762,7 +2765,8 @@ public class GeoReportServlet extends HttpServlet {
                     headerBorderColor = getColorFromXPathNode(nodeFrameColor);
                 }
                 if (getXpathString("@outlineWidthM", object) != null) {
-                    headerBorderWidth = Float.parseFloat(getXpathString("@outlineWidthM", object));
+                    String[] splitResult = getXpathString("@outlineWidthM", object).split(",");
+                    headerBorderWidth = Float.parseFloat(splitResult[0]);
                 }
                 break;
             case "Cell":
@@ -2778,7 +2782,8 @@ public class GeoReportServlet extends HttpServlet {
                     cellBorderColor = getColorFromXPathNode(nodeFrameColor);
                 }
                 if (getXpathString("@outlineWidthM", object) != null) {
-                    cellBorderWidth = Float.parseFloat(getXpathString("@outlineWidthM", object));
+                    String[] splitResult = getXpathString("@outlineWidthM", object).split(",");
+                    cellBorderWidth = Float.parseFloat(splitResult[0]);
                 }
                 break;
             case "CellAlternate":
@@ -2794,7 +2799,8 @@ public class GeoReportServlet extends HttpServlet {
                     alternateCellBorderColor = getColorFromXPathNode(nodeFrameColor);
                 }
                 if (getXpathString("@outlineWidthM", object) != null) {
-                    alternateCellBorderWidth = Float.parseFloat(getXpathString("@outlineWidthM", object));
+                    String[] splitResult = getXpathString("@outlineWidthM", object).split(",");
+                    alternateCellBorderWidth = Float.parseFloat(splitResult[0]);
                 }
                 break;
         }
