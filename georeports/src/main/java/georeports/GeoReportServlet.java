@@ -1584,6 +1584,9 @@ public class GeoReportServlet extends HttpServlet {
                                                     {
                                                         Node currentLabel = XmlNodeListLabels.item(iLabel);
                                                         String LabelText = getXpathString("@labelText",currentLabel);
+                                                        LabelText = LabelText.replaceAll("@featurekey", featKey);
+                                                        LabelText = LabelText.replaceAll("@databasekey", dataKey);
+                                                        LabelText = LabelText.replaceAll("@referencekey", refKey);
                                                         if (!Objects.equals(LabelText, ""))
                                                         {
                                                             setLabelVariables(currentLabel);
@@ -1608,6 +1611,9 @@ public class GeoReportServlet extends HttpServlet {
                                                                 LabelText = LabelSQLDS.getString(1);
                                                             }
                                                         }
+                                                        LabelText = LabelText.replaceAll("@featurekey", featKey);
+                                                        LabelText = LabelText.replaceAll("@databasekey", dataKey);
+                                                        LabelText = LabelText.replaceAll("@referencekey", refKey);
 
                                                         if (!Objects.equals(LabelText, ""))
                                                         {
@@ -1674,6 +1680,9 @@ public class GeoReportServlet extends HttpServlet {
 
                                                         }
                                                         dsOgr.ReleaseResultSet(layer1);
+                                                        LabelText = LabelText.replaceAll("@featurekey", featKey);
+                                                        LabelText = LabelText.replaceAll("@databasekey", dataKey);
+                                                        LabelText = LabelText.replaceAll("@referencekey", refKey);
                                                         if (!Objects.equals(LabelText, ""))
                                                         {
                                                             setLabelVariables(currentLabel);
