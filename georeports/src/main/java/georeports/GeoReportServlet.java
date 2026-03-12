@@ -37,6 +37,8 @@ import java.util.Map;
 
 import org.gdal.ogr.*;
 import org.gdal.gdal.*;
+import org.gdal.osr.*;
+import org.gdal.gdalconst.*;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -80,10 +82,18 @@ public class GeoReportServlet extends HttpServlet {
     private final Map<String, PdfTask> subTasks = new ConcurrentHashMap<>();
     private static final int MAX_RECURSION_DEPTH = 3;
 
+    // Required params
     String report;
     String featKey;
+
+    // Optional Params
     String dataKey;
     String refKey;
+    String scaleRaw;
+    String s_epsgRaw;
+    String t_epsgRaw;
+    String xRaw;
+    String yRaw;
 
     double p = 0;
 
@@ -139,17 +149,27 @@ public class GeoReportServlet extends HttpServlet {
         String featureKey;
         String databaseKey;
         String referenceKey;
+        String scaleRawValue;
+        String s_epsgRawValue;
+        String t_epsgRawValue;
+        String xRawValue;
+        String yRawValue;
         String error;
         volatile int progress = 0;
         volatile boolean isDone = false;
         Path tempFile;
         Future<?> future;
 
-        PdfTask(String reportType, String featureKey, String databaseKey, String referenceKey) {
+        PdfTask(String reportType, String featureKey, String databaseKey, String referenceKey,String scaleRawValue, String s_epsgRawValue, String t_epsgRawValue, String xRawValue, String yRawValue) {
             this.reportType = reportType;
             this.featureKey = featureKey;
             this.databaseKey = databaseKey;
             this.referenceKey = referenceKey;
+            this.scaleRawValue = scaleRawValue;
+            this.s_epsgRawValue = s_epsgRawValue;
+            this.t_epsgRawValue = t_epsgRawValue;
+            this.xRawValue = xRawValue;
+            this.yRawValue = yRawValue;
         }
     }
 
@@ -192,10 +212,15 @@ public class GeoReportServlet extends HttpServlet {
 
         if (dataKey == null){ dataKey = "";}
         if (refKey == null){ refKey = "";}
+        if (scaleRaw == null){ scaleRaw = "";}
+        if (s_epsgRaw == null){ s_epsgRaw = "";}
+        if (t_epsgRaw == null){ t_epsgRaw = "";}
+        if (xRaw == null){ xRaw = "";}
+        if (yRaw == null){ yRaw = "";}
 
         logger.info("New direct request: Session={}, Report={}, FeatKey={}", sessionId, report, featKey);
 
-        PdfTask task = new PdfTask(report, featKey, dataKey, refKey);
+        PdfTask task = new PdfTask(report, featKey, dataKey, refKey, scaleRaw, s_epsgRaw, t_epsgRaw, xRaw, yRaw);
         task.tempFile = Files.createTempFile("report_", ".pdf");
         mainTasks.put(sessionId, task);
 
@@ -219,6 +244,11 @@ public class GeoReportServlet extends HttpServlet {
 
         if (dataKey == null){ dataKey = "";}
         if (refKey == null){ refKey = "";}
+        if (scaleRaw == null){ scaleRaw = "";}
+        if (s_epsgRaw == null){ s_epsgRaw = "";}
+        if (t_epsgRaw == null){ t_epsgRaw = "";}
+        if (xRaw == null){ xRaw = "";}
+        if (yRaw == null){ yRaw = "";}
 
 
 
@@ -237,7 +267,7 @@ public class GeoReportServlet extends HttpServlet {
         PdfTask existing = mainTasks.get(sessionId);
         if (existing != null && existing.future != null) existing.future.cancel(true);
 
-        PdfTask task = new PdfTask(report, featKey, dataKey, refKey);
+        PdfTask task = new PdfTask(report, featKey, dataKey, refKey, scaleRaw, s_epsgRaw, t_epsgRaw, xRaw, yRaw);
         mainTasks.put(sessionId, task);
         task.tempFile = Files.createTempFile("report_", ".pdf");
 
@@ -536,7 +566,7 @@ public class GeoReportServlet extends HttpServlet {
                                                             double PageMapImageWidthMM = Double.parseDouble(MapImageWidth);
 
                                                             //Initiate variables for values retrieved by OGR
-                                                            double OGRFeatureDiagonalLength;
+                                                            double OGRFeatureDiagonalLength = 0;
                                                             double OGRFeatureCentroidX = 0;
                                                             double OGRFeatureCentroidY = 0;
                                                             double FeatureScale = 0;
@@ -633,7 +663,6 @@ public class GeoReportServlet extends HttpServlet {
                                                                                 Layer layer1 = dsOgr.GetLayerByName("OGRGeoJSON");
 
 
-
                                                                                 layer1.ResetReading();
                                                                                 Feature feature1 = layer1.GetNextFeature();
                                                                                 Geometry FeatureGeometry = feature1.GetGeometryRef();
@@ -675,8 +704,7 @@ public class GeoReportServlet extends HttpServlet {
                                                                             FeatureSQL = FeatureSQL.replaceAll("@databasekey", dataKey);
                                                                             FeatureSQL = FeatureSQL.replaceAll("@referencekey", refKey);
 
-                                                                            if (!Objects.equals(FeatureSQL, "") && !Objects.equals(ScaleFeatureSQLConnection, "") && !Objects.equals(ScaleFeatureSQLTable, ""))
-                                                                            {
+                                                                            if (!Objects.equals(FeatureSQL, "") && !Objects.equals(ScaleFeatureSQLConnection, "") && !Objects.equals(ScaleFeatureSQLTable, "")) {
                                                                                 //Open OGR connection (Native OGR driver, NOT JDBC)
                                                                                 String FeatureConnection = ScaleFeatureSQLConnection + " " + ScaleFeatureSQLTable;
                                                                                 ogr.RegisterAll();
@@ -690,13 +718,10 @@ public class GeoReportServlet extends HttpServlet {
                                                                                 Geometry FeatureGeometry = feature1.GetGeometryRef();
 
                                                                                 //look at first geometry and determine type
-                                                                                if (Objects.equals(FeatureGeometry.GetGeometryName(), "POINT"))
-                                                                                {
+                                                                                if (Objects.equals(FeatureGeometry.GetGeometryName(), "POINT")) {
                                                                                     //Point Feature
                                                                                     OGRFeatureDiagonalLength = Double.parseDouble(ScaleFeatureMultiplier);
-                                                                                }
-                                                                                else
-                                                                                {
+                                                                                } else {
                                                                                     //Non Point Feature - use envelope of feature(s) to determine FeatureScale
                                                                                     //org.gdal.ogr.Geometry.
                                                                                     double[] ext = new double[4];
@@ -722,8 +747,87 @@ public class GeoReportServlet extends HttpServlet {
                                                                             // use the url parameter refkey to supply a value for FeatureScale
                                                                             break;
                                                                         case "urlparams":
-                                                                            //FUTURE
                                                                             // use url params (scale,x,y,s_epsg,t_epsg) present
+                                                                            /*
+                                                                            https://geospatial.whanganui.govt.nz/georeports/georeport?report=SiteMapA4PrefscaledTEST&featkey=33772&scale=auto
+                                                                            https://geospatial.whanganui.govt.nz/georeports/georeport?report=SiteMapA4PrefscaledTEST&featkey=33772&scale=2000
+                                                                            https://geospatial.whanganui.govt.nz/georeports/georeport?report=SiteMapA4PrefscaledTEST&featkey=33772&scale=auto&x=175.04891037940976&y=-39.933508850600234&s_epsg=4326&t_epsg=2193
+                                                                            https://geospatial.whanganui.govt.nz/georeports/georeport?report=SiteMapA4PrefscaledTEST&featkey=33772&scale=2000&x=175.04891037940976&y=-39.933508850600234&s_epsg=4326&t_epsg=2193
+                                                                             */
+                                                                            //if (scaleRaw != null && s_epsgRaw != null && t_epsgRaw != null && xRaw != null && yRaw != null) {
+                                                                            if (scaleRaw != null) {
+                                                                                ScaleFeatureMultiplier = getXpathString("//Pages/Page[position()=" + iPage1 + "]/MapImage[position()=" + iMap1 + "]/ScaleFeature/@multiplier", configDoc);
+                                                                                ScaleFeatureURIPath = getXpathString("//Pages/Page[position()=" + iPage1 + "]/MapImage[position()=" + iMap1 + "]/ScaleFeature/URI", configDoc);
+                                                                                FeatureURL = ScaleFeatureURIPath;
+                                                                                FeatureURL = FeatureURL.replaceAll("@featurekey", keyEncode4URL(featKey));
+                                                                                FeatureURL = FeatureURL.replaceAll("@databasekey", keyEncode4URL(dataKey));
+                                                                                FeatureURL = FeatureURL.replaceAll("@referencekey", keyEncode4URL(refKey));
+                                                                                if (isURLReachable(FeatureURL)) {
+                                                                                    ogr.RegisterAll();
+                                                                                    if (FeatureURL.startsWith("https")) {
+                                                                                        if (Objects.equals(gdal.GetConfigOption("GDAL_HTTP_UNSAFESSL", "NO"), "NO")) {
+                                                                                            gdal.SetConfigOption("GDAL_HTTP_UNSAFESSL", "YES");
+                                                                                        }
+                                                                                    }
+
+                                                                                    DataSource dsOgr = ogr.Open(FeatureURL, 0);
+                                                                                    Layer layer1 = dsOgr.GetLayerByIndex(0);
+                                                                                    if (layer1 != null) {
+                                                                                        layer1.ResetReading();
+
+                                                                                        if (layer1.GetFeatureCount() > 0) {
+                                                                                            Feature feature1 = layer1.GetNextFeature();
+                                                                                            Geometry FeatureGeometry = feature1.GetGeometryRef();
+                                                                                            //look at first geometry and determine type
+                                                                                            if (Objects.equals(FeatureGeometry.GetGeometryRef(0).GetGeometryName(), "POINT")) {
+                                                                                                //Point Feature
+                                                                                                OGRFeatureDiagonalLength = Double.parseDouble(ScaleFeatureMultiplier);
+                                                                                                OGRFeatureCentroidX = FeatureGeometry.GetGeometryRef(0).GetX();
+                                                                                                OGRFeatureCentroidY = FeatureGeometry.GetGeometryRef(0).GetY();
+                                                                                            } else {
+
+                                                                                                //Non Point Feature - use envelope of feature(s) to determine FeatureScale
+                                                                                                double[] ext = new double[4];
+                                                                                                FeatureGeometry.GetEnvelope(ext);
+                                                                                                //Get centroid X and Y of envelope
+                                                                                                //OGRFeatureCentroidX = ext[0] + ((ext[1] - ext[0]) / 2);
+                                                                                                //OGRFeatureCentroidY = ext[2] + ((ext[3] - ext[2]) / 2);
+                                                                                                OGRFeatureCentroidX = (ext[0] + ext[1]) / 2;
+                                                                                                OGRFeatureCentroidY = (ext[2] + ext[3]) / 2;
+
+                                                                                                //Check and set scale for map based on feature scale and scale values from config
+                                                                                                OGRFeatureDiagonalLength = Math.sqrt(abs(Math.pow((ext[1] - ext[0]), 2) + Math.pow((ext[3] - ext[2]), 2)));
+                                                                                                //Add to diagonal length so that selection shows properly
+                                                                                                OGRFeatureDiagonalLength = OGRFeatureDiagonalLength * Double.parseDouble(ScaleFeatureMultiplier);
+                                                                                            }
+                                                                                            feature1.delete();
+                                                                                        }
+                                                                                    }
+                                                                                    //dsOgr.ReleaseResultSet(layer1);  // Causes: A fatal error has been detected by the Java Runtime Environment
+
+                                                                                    if (Objects.equals(scaleRaw, "auto")) {
+                                                                                        // scale from url param is auto
+                                                                                        // Calculate scale from the feature
+                                                                                        FeatureScale = (OGRFeatureDiagonalLength * 1000) / PageMapImageWidthMM;
+                                                                                    } else {
+                                                                                        // scale value from url param
+                                                                                        // number so convert to double
+                                                                                        FeatureScale = Double.parseDouble(scaleRaw);
+                                                                                    }
+
+
+                                                                                } else {
+                                                                                    logger.error("OGCWFS Feature URL unable to be retrieved: {}", FeatureURL);
+                                                                                }
+                                                                                if (s_epsgRaw != null && t_epsgRaw != null && xRaw != null && yRaw != null) {
+                                                                                    CoordinateTransformation coordinateTransform = getCoordinateTransformation(s_epsgRaw, t_epsgRaw);
+                                                                                    double[] t_pt = {0, 0, 0};
+                                                                                    coordinateTransform.TransformPoint(t_pt, Double.parseDouble(xRaw), Double.parseDouble(yRaw), 0);
+                                                                                    OGRFeatureCentroidX = t_pt[0];
+                                                                                    OGRFeatureCentroidY = t_pt[1];
+                                                                                    coordinateTransform.delete();
+                                                                                }
+                                                                            }
                                                                             break;
                                                                         default:
                                                                             break;
@@ -2046,6 +2150,16 @@ public class GeoReportServlet extends HttpServlet {
         }
     }
 
+    private CoordinateTransformation getCoordinateTransformation(String s_epsgRaw, String t_epsgRaw) {
+        SpatialReference s_srs = new SpatialReference("");
+        s_srs.ImportFromEPSG(Integer.parseInt(s_epsgRaw));
+        s_srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER);  // Fix for TransformPoint method x and y flipped using GDAL 3.0.4 compared to GDAL 2.4
+        SpatialReference t_srs = new SpatialReference("");
+        t_srs.ImportFromEPSG(Integer.parseInt(t_epsgRaw));
+        t_srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER);  // Fix for TransformPoint method x and y flipped using GDAL 3.0.4 compared to GDAL 2.4
+        return new CoordinateTransformation(s_srs, t_srs);
+    }
+
     private int getMapFeatureTextFontStyleValue(String fontStyle) {
         int fontStyleValue = 0; //regular
         if (Objects.equals(fontStyle.toLowerCase(), "italic")) {
@@ -2088,7 +2202,7 @@ public class GeoReportServlet extends HttpServlet {
                 // RECURSION POINT: Generate sub-report in memory
                 String subReportName = getXpathString("@report", item);
                 logger.info("Internal Request started for FeatKey: {} Subreport: {}", parentTask.featureKey, subReportName);
-                PdfTask subTask = new PdfTask(subReportName, parentTask.featureKey, parentTask.databaseKey, parentTask.referenceKey);
+                PdfTask subTask = new PdfTask(subReportName, parentTask.featureKey, parentTask.databaseKey, parentTask.referenceKey, parentTask.scaleRawValue, parentTask.s_epsgRawValue, parentTask.t_epsgRawValue, parentTask.xRawValue, parentTask.yRawValue);
                 subTask.tempFile = Files.createTempFile("subreport_", ".pdf");
                 subTasks.put(sessionId, subTask);
                 logger.info(subTask.tempFile.toString());
@@ -2196,12 +2310,15 @@ public class GeoReportServlet extends HttpServlet {
     }
 
     private void showUi(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        String report = req.getParameter("report");
-        String featKey = req.getParameter("featkey");
-        String datakey = req.getParameter("datakey");
-        String refkey = req.getParameter("refkey");
-        if (datakey == null){ datakey = "";}
-        if (refkey == null){ refkey = "";}
+        getURLParameters(req);
+        if (dataKey == null){ dataKey = "";}
+        if (refKey == null){ refKey = "";}
+        if (scaleRaw == null){ scaleRaw = "";}
+        if (s_epsgRaw == null){ s_epsgRaw = "";}
+        if (t_epsgRaw == null){ t_epsgRaw = "";}
+        if (xRaw == null){ xRaw = "";}
+        if (yRaw == null){ yRaw = "";}
+
         resp.setContentType("text/html");
         resp.getWriter().println("""
             <html>
@@ -2216,17 +2333,15 @@ public class GeoReportServlet extends HttpServlet {
             <body>
                 <div class="msg_content">
                 <h2>Generating Report</h2>""");
-        //resp.getWriter().println("            <button onclick=\"run('" + report + "', '" + featKey + "', '" + dataKey + "', '" + refKey + "')\">Generate</button>");
-
         resp.getWriter().println("""
                         <div id="box" style="margin-top:15px;">
                         <div id="bar"></div></div>
                 <p id="stat"></p>
                 <script>
-                    function run(report, featKey, dataKey, refKey) {
+                    function run(report, featKey, dataKey, refKey, scaleRaw, s_epsgRaw, t_epsgRaw, xRaw, yRaw) {
                         const bar = document.getElementById('bar');
                         const stat = document.getElementById('stat');
-                        const source = new EventSource(`georeport/progress?report=${report}&featkey=${featKey}&dataKey=${dataKey}&refKey=${refKey}`);
+                        const source = new EventSource(`georeport/progress?report=${report}&featkey=${featKey}&dataKey=${dataKey}&refKey=${refKey}&scale=${scaleRaw}&s_epsg=${s_epsgRaw}&t_epsg=${t_epsgRaw}&x=${xRaw}&y=${yRaw}`);
 
                         source.onmessage = (e) => {
                             if (e.data === 'complete') {
@@ -2244,7 +2359,7 @@ public class GeoReportServlet extends HttpServlet {
                         });
                     }
                 """);
-        resp.getWriter().println("window.addEventListener('load', run('" + report + "', '" + featKey + "', '" + dataKey + "', '" + refKey + "'));");
+        resp.getWriter().println("window.addEventListener('load', run('" + report + "', '" + featKey + "', '" + dataKey + "', '" + refKey + "', '" + scaleRaw + "', '" + s_epsgRaw + "', '" + t_epsgRaw + "', '" + xRaw + "', '" + yRaw + "'));");
         resp.getWriter().println("""
                 </script>
                 </div>
@@ -2263,6 +2378,7 @@ public class GeoReportServlet extends HttpServlet {
 
     private void getURLParameters(HttpServletRequest req) {
         // required URL params
+        logger.info("URL Parameters: " + req.getQueryString());
         try {
             if(req.getParameter("report").matches("[A-z0-9-_./]+")){
                 report = req.getParameter("report");
@@ -2292,6 +2408,57 @@ public class GeoReportServlet extends HttpServlet {
             logger.error(e.getMessage());
         } catch (NullPointerException e) {
             logger.info("refkey is null");
+        }
+
+        // scaleRaw
+        try {
+            if(req.getParameter("scale").matches("[0-9]+|auto")){
+                scaleRaw = req.getParameter("scale");
+            }
+        } catch (PatternSyntaxException e) {
+            logger.error(e.getMessage());
+        } catch (NullPointerException e) {
+            logger.info("scale is null");
+        }
+        // s_epsgRaw
+        try {
+            if(req.getParameter("s_epsg").matches("[0-9]{4}")){
+                s_epsgRaw = req.getParameter("s_epsg");
+            }
+        } catch (PatternSyntaxException e) {
+            logger.error(e.getMessage());
+        } catch (NullPointerException e) {
+            logger.info("s_epsg is null");
+        }
+        // t_epsgRaw
+        try {
+            if(req.getParameter("t_epsg").matches("[0-9]{4}")){
+                t_epsgRaw = req.getParameter("t_epsg");
+            }
+        } catch (PatternSyntaxException e) {
+            logger.error(e.getMessage());
+        } catch (NullPointerException e) {
+            logger.info("t_epsg is null");
+        }
+        // xRaw
+        try {
+            if(req.getParameter("x").matches("[.0-9]+")){
+                xRaw = req.getParameter("x");
+            }
+        } catch (PatternSyntaxException e) {
+            logger.error(e.getMessage());
+        } catch (NullPointerException e) {
+            logger.info("x is null");
+        }
+        // yRaw
+        try {
+            if(req.getParameter("y").matches("[-.0-9]+")){
+                yRaw = req.getParameter("y");
+            }
+        } catch (PatternSyntaxException e) {
+            logger.error(e.getMessage());
+        } catch (NullPointerException e) {
+            logger.info("y is null");
         }
     }
 
