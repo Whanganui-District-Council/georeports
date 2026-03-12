@@ -16,6 +16,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.xpath.*;
 
 import java.awt.*;
+import java.awt.geom.Point2D;
 import java.io.*;
 import java.net.*;
 import java.net.http.HttpClient;
@@ -1148,7 +1149,7 @@ public class GeoReportServlet extends HttpServlet {
                                                                                     case "POINT":
 
                                                                                         if (FeatureGeometry.GetPointCount() > 0) {
-                                                                                            ArrayList<Point> featurePoints = getMapFeatureGeometryPoints(FeatureGeometry,MapImageX,MapImageY,MapExtentMinX,MapExtentMaxY,MapImageNeatScale,document);
+                                                                                            ArrayList<Point2D> featurePoints = getMapFeatureGeometryPoints(FeatureGeometry,MapImageX,MapImageY,MapExtentMinX,MapExtentMaxY,MapImageNeatScale,document);
 
                                                                                             if (getXpathString("Draw", currentMapFeature) != null) {
 
@@ -1163,7 +1164,7 @@ public class GeoReportServlet extends HttpServlet {
                                                                                                     Node currentPointDraw = getXpathNode(".",XmlNodeListPointDraw.item(iPointDraw));
 
                                                                                                     String pointDrawType = getXpathString("@type",currentPointDraw);
-                                                                                                    Point centerPoint = featurePoints.get(0);
+                                                                                                    Point2D centerPoint = featurePoints.get(0);
 
                                                                                                     switch (pointDrawType.toLowerCase()) {
 
@@ -1326,7 +1327,7 @@ public class GeoReportServlet extends HttpServlet {
                                                                                         break;
                                                                                     case "LINESTRING":
                                                                                         if (FeatureGeometry.GetPointCount() > 0) {
-                                                                                            ArrayList<Point> featurePoints = getMapFeatureGeometryPoints(FeatureGeometry,MapImageX,MapImageY,MapExtentMinX,MapExtentMaxY,MapImageNeatScale,document);
+                                                                                            ArrayList<Point2D> featurePoints = getMapFeatureGeometryPoints(FeatureGeometry,MapImageX,MapImageY,MapExtentMinX,MapExtentMaxY,MapImageNeatScale,document);
                                                                                             if (!featurePoints.isEmpty()){
                                                                                                 //set defaults
                                                                                                 Color strokeColor = new Color(0,0,0,255);
@@ -1348,7 +1349,7 @@ public class GeoReportServlet extends HttpServlet {
                                                                                         if (FeatureGeometry.GetGeometryCount() > 0) {
                                                                                             for (var polygonIndex = 0; polygonIndex < FeatureGeometry.GetGeometryCount(); polygonIndex++) {
                                                                                                 Geometry currentGeometry = FeatureGeometry.GetGeometryRef(polygonIndex);
-                                                                                                ArrayList<Point> featurePoints = getMapFeatureGeometryPoints(currentGeometry,MapImageX,MapImageY,MapExtentMinX,MapExtentMaxY,MapImageNeatScale,document);
+                                                                                                ArrayList<Point2D> featurePoints = getMapFeatureGeometryPoints(currentGeometry,MapImageX,MapImageY,MapExtentMinX,MapExtentMaxY,MapImageNeatScale,document);
                                                                                                 if (!featurePoints.isEmpty()){
                                                                                                     //set defaults
                                                                                                     Color fillColor = new Color(255,255,255,0);
@@ -1381,7 +1382,7 @@ public class GeoReportServlet extends HttpServlet {
                                                                                             for (var multiLinestringIndex = 0; multiLinestringIndex < FeatureGeometry.GetGeometryCount(); multiLinestringIndex++)
                                                                                             {
                                                                                                 Geometry currentGeometry = FeatureGeometry.GetGeometryRef(multiLinestringIndex);
-                                                                                                ArrayList<Point> featurePoints = getMapFeatureGeometryPoints(currentGeometry,MapImageX,MapImageY,MapExtentMinX,MapExtentMaxY,MapImageNeatScale,document);
+                                                                                                ArrayList<Point2D> featurePoints = getMapFeatureGeometryPoints(currentGeometry,MapImageX,MapImageY,MapExtentMinX,MapExtentMaxY,MapImageNeatScale,document);
                                                                                                 if (!featurePoints.isEmpty()){
                                                                                                     //set defaults
                                                                                                     Color strokeColor = new Color(0,0,0,255);
@@ -1408,7 +1409,7 @@ public class GeoReportServlet extends HttpServlet {
                                                                                                 for (var polygonIndex = 0; polygonIndex < ring.GetGeometryCount(); polygonIndex++)
                                                                                                 {
                                                                                                     var currentGeometry = ring.GetGeometryRef(polygonIndex);
-                                                                                                    ArrayList<Point> featurePoints = getMapFeatureGeometryPoints(currentGeometry,MapImageX,MapImageY,MapExtentMinX,MapExtentMaxY,MapImageNeatScale,document);
+                                                                                                    ArrayList<Point2D> featurePoints = getMapFeatureGeometryPoints(currentGeometry,MapImageX,MapImageY,MapExtentMinX,MapExtentMaxY,MapImageNeatScale,document);
                                                                                                     if (!featurePoints.isEmpty()){
                                                                                                         //set defaults
                                                                                                         Color fillColor = new Color(255,255,255,0);
@@ -2499,7 +2500,7 @@ public class GeoReportServlet extends HttpServlet {
         }
     }
 
-    private void drawMapFeatureLine(Document document, PdfContentByte cb, ArrayList<Point> featurePoints, Color borderColor, float borderWidth) {
+    private void drawMapFeatureLine(Document document, PdfContentByte cb, ArrayList<Point2D> featurePoints, Color borderColor, float borderWidth) {
         cb.resetRGBColorStroke();
         cb.saveState();
         //draw clipping rectangle based on map image
@@ -2519,7 +2520,7 @@ public class GeoReportServlet extends HttpServlet {
         cb.sanityCheck();
     }
 
-    private void drawMapFeaturePolygon(Document document, PdfContentByte cb, ArrayList<Point> featurePoints, Color backgroundColor, Color borderColor, float borderWidth) {
+    private void drawMapFeaturePolygon(Document document, PdfContentByte cb, ArrayList<Point2D> featurePoints, Color backgroundColor, Color borderColor, float borderWidth) {
         cb.resetRGBColorFill();
         cb.resetRGBColorStroke();
         cb.saveState();
@@ -2542,7 +2543,7 @@ public class GeoReportServlet extends HttpServlet {
         cb.sanityCheck();
     }
 
-    private void drawMapFeatureEllipseFromCenter(Document document, PdfContentByte cb, Point centerPoint, float width, float height, Color backgroundColor, Color borderColor, float borderWidth) {
+    private void drawMapFeatureEllipseFromCenter(Document document, PdfContentByte cb, Point2D centerPoint, float width, float height, Color backgroundColor, Color borderColor, float borderWidth) {
         cb.resetRGBColorFill();
         cb.resetRGBColorStroke();
         cb.saveState();
@@ -2553,10 +2554,10 @@ public class GeoReportServlet extends HttpServlet {
         cb.setRGBColorStroke(borderColor.getRed(),borderColor.getGreen(),borderColor.getBlue(),borderColor.getAlpha());
         cb.setRGBColorFill(backgroundColor.getRed(),backgroundColor.getGreen(),backgroundColor.getBlue(),backgroundColor.getAlpha());
         // Calculate the bounding box corners for the ellipse
-        float x1 = centerPoint.x - (width / 2);
-        float y1 = centerPoint.y - (height / 2);
-        float x2 = centerPoint.x + (width / 2);
-        float y2 = centerPoint.y + (height / 2);
+        float x1 = (float) (centerPoint.getX() - (width / 2));
+        float y1 = (float) (centerPoint.getY() - (height / 2));
+        float x2 = (float) (centerPoint.getX() + (width / 2));
+        float y2 = (float) (centerPoint.getY() + (height / 2));
         cb.ellipse(x1,y1,x2,y2);
         cb.setLineWidth(borderWidth);
         //cb.closePathStroke();
@@ -2565,7 +2566,7 @@ public class GeoReportServlet extends HttpServlet {
         cb.sanityCheck();
     }
 
-    private void drawMapFeatureRectangleFromCenter(Document document, PdfContentByte cb, Point centerPoint, float width, float height, Color backgroundColor, Color borderColor, float borderWidth) {
+    private void drawMapFeatureRectangleFromCenter(Document document, PdfContentByte cb, Point2D centerPoint, float width, float height, Color backgroundColor, Color borderColor, float borderWidth) {
         cb.resetRGBColorFill();
         cb.resetRGBColorStroke();
         cb.saveState();
@@ -2575,8 +2576,8 @@ public class GeoReportServlet extends HttpServlet {
         cb.newPath();
         cb.setRGBColorStroke(borderColor.getRed(),borderColor.getGreen(),borderColor.getBlue(),borderColor.getAlpha());
         cb.setRGBColorFill(backgroundColor.getRed(),backgroundColor.getGreen(),backgroundColor.getBlue(),backgroundColor.getAlpha());
-        float x1 = centerPoint.x - (width / 2);
-        float y1 = centerPoint.y - (height / 2);
+        float x1 = (float) (centerPoint.getX() - (width / 2));
+        float y1 = (float) (centerPoint.getY() - (height / 2));
         cb.rectangle(x1,y1,width,height);
         cb.setLineWidth(borderWidth);
         //cb.closePathStroke();
@@ -2585,7 +2586,7 @@ public class GeoReportServlet extends HttpServlet {
         cb.sanityCheck();
     }
 
-    private void drawMapFeatureText(Document document, PdfContentByte cb, Point centerPoint, String text, Font font, int textAlignment, float rotation) {
+    private void drawMapFeatureText(Document document, PdfContentByte cb, Point2D centerPoint, String text, Font font, int textAlignment, float rotation) {
         cb.saveState();
         //draw clipping rectangle based on map image
         cb.rectangle(millimetersToPoints(Float.parseFloat(MapImageX)),getTopY(document,millimetersToPoints(Float.parseFloat(MapImageY)))-millimetersToPoints(Float.parseFloat(MapImageHeight)),millimetersToPoints(Float.parseFloat(MapImageWidth)), millimetersToPoints(Float.parseFloat(MapImageHeight)));
@@ -2595,13 +2596,13 @@ public class GeoReportServlet extends HttpServlet {
         BaseFont bf = font.getBaseFont();
         cb.setFontAndSize(bf, font.getSize());
         cb.setColorFill(font.getColor());
-        cb.showTextAligned(textAlignment,text, centerPoint.x, centerPoint.y - (font.getSize()/2), rotation);
+        cb.showTextAligned(textAlignment,text, (float) centerPoint.getX(), (float) (centerPoint.getY() - (font.getSize()/2)), rotation);
         cb.endText();
         cb.restoreState();
         cb.sanityCheck();
     }
 
-    private void drawMapFeatureImage(String imageURL, Point centerPoint, String imageScaleFactor, Document document) throws IOException {
+    private void drawMapFeatureImage(String imageURL, Point2D centerPoint, String imageScaleFactor, Document document) throws IOException {
         if (!Objects.equals(imageURL, "")) {
             URL url = new URL(imageURL);
             InputStream in = url.openStream();
@@ -2610,7 +2611,7 @@ public class GeoReportServlet extends HttpServlet {
             Image image = Image.getInstance(imageBytes);
             float maxWidth = image.getWidth() * Float.parseFloat(imageScaleFactor); // Maximum width of the image
             float maxHeight = image.getHeight() * Float.parseFloat(imageScaleFactor); // Maximum height of the image
-            image.setAbsolutePosition(centerPoint.x,centerPoint.y);
+            image.setAbsolutePosition((float) centerPoint.getX(), (float) centerPoint.getY());
             image.scaleToFit(maxWidth, maxHeight); // Scales the image to fit within the max dimensions while maintaining aspect ratio
             document.add(image);
         }
@@ -2637,22 +2638,23 @@ public class GeoReportServlet extends HttpServlet {
         return ScaleFeatureSQLConnection;
     }
 
-    private ArrayList<Point> getMapFeatureGeometryPoints(Geometry FeatureGeometry,
+    private ArrayList<Point2D> getMapFeatureGeometryPoints(Geometry FeatureGeometry,
                                                          String MapImageX, String MapImageY, String MapExtentMinX, String MapExtentMaxY,
                                                          String MapImageNeatScale, Document document){
-        ArrayList<Point> featurePoints = new ArrayList<>();
+        ArrayList<Point2D> featurePoints = new ArrayList<>();
         for (var pointIndex = 0; pointIndex < FeatureGeometry.GetPointCount(); pointIndex++)
         {
             double[] pointCoordinates = new double[3];
             FeatureGeometry.GetPoint(pointIndex, pointCoordinates);
             double MapFeatureX = pointCoordinates[0];
             double MapFeatureY = pointCoordinates[1];
-            BigDecimal bd = BigDecimal.valueOf(Float.parseFloat(MapImageX) + (((MapFeatureX - Float.parseFloat(MapExtentMinX)) * 1000) / Float.parseFloat(MapImageNeatScale)));
-            float PageFeatureNodeX = bd.setScale(5, RoundingMode.HALF_UP).floatValue();
-            bd = BigDecimal.valueOf(Float.parseFloat(MapImageY) - (((MapFeatureY - Float.parseFloat(MapExtentMaxY)) * 1000) / Float.parseFloat(MapImageNeatScale)));
-            float PageFeatureNodeY = bd.setScale(5, RoundingMode.HALF_UP).floatValue();
-            Point p = new Point();
+            float PageFeatureNodeX = (float) (Float.parseFloat(MapImageX) + (((MapFeatureX - Float.parseFloat(MapExtentMinX)) * 1000) / Float.parseFloat(MapImageNeatScale)));
+            float PageFeatureNodeY = (float) (Float.parseFloat(MapImageY) - (((MapFeatureY - Float.parseFloat(MapExtentMaxY)) * 1000) / Float.parseFloat(MapImageNeatScale)));
+            Point2D p = new Point2D.Float();
             p.setLocation(millimetersToPoints(PageFeatureNodeX),getTopY(document,millimetersToPoints(PageFeatureNodeY)));
+            logger.info("MapFeature point coordinate: g:  " + MapFeatureX + " , " + MapFeatureY);
+            logger.info("MapFeature point coordinate: mm: " + PageFeatureNodeX + " , " + PageFeatureNodeY);
+            logger.info("MapFeature point coordinate: p:  " + p.getX() + " , " + p.getY());
             featurePoints.add(p);
         }
         return featurePoints;
