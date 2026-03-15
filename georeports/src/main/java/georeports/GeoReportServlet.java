@@ -26,8 +26,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.Duration;
-import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -1831,9 +1831,10 @@ public class GeoReportServlet extends HttpServlet {
                                                 // Label - Current Date
                                                 if (getXpathNode("//LayoutItem[@id='ppCurrentDate']", layoutDoc) != null) {
                                                     Node currentLabel = getXpathNode("//LayoutItem[@id='ppCurrentDate']", layoutDoc);
-                                                    LocalDateTime now = LocalDateTime.now();
+                                                    ZonedDateTime explicitNow = ZonedDateTime.now(ZoneId.systemDefault());
+
                                                     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("EEEE, MMMM dd, yyyy"); //e.g. "dd/MM/yyyy HH:mm"
-                                                    String textDateTime = now.format(formatter);
+                                                    String textDateTime = explicitNow.format(formatter);
 
                                                     if (!Objects.equals(textDateTime, ""))
                                                     {
@@ -2652,9 +2653,6 @@ public class GeoReportServlet extends HttpServlet {
             float PageFeatureNodeY = (float) (Float.parseFloat(MapImageY) - (((MapFeatureY - Float.parseFloat(MapExtentMaxY)) * 1000) / Float.parseFloat(MapImageNeatScale)));
             Point2D p = new Point2D.Float();
             p.setLocation(millimetersToPoints(PageFeatureNodeX),getTopY(document,millimetersToPoints(PageFeatureNodeY)));
-            logger.info("MapFeature point coordinate: g:  " + MapFeatureX + " , " + MapFeatureY);
-            logger.info("MapFeature point coordinate: mm: " + PageFeatureNodeX + " , " + PageFeatureNodeY);
-            logger.info("MapFeature point coordinate: p:  " + p.getX() + " , " + p.getY());
             featurePoints.add(p);
         }
         return featurePoints;
