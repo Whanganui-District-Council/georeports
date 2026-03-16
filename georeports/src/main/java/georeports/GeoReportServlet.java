@@ -418,6 +418,7 @@ public class GeoReportServlet extends HttpServlet {
                         document.addAuthor(getXpathString("//Settings/Output/PDF/Metadata/Author",configDoc));
                         document.addCreator("GeoReports");
 
+                        String configFilePath = configPath + "config.properties";
                         String dbConfigFilePath = configPath + "db_config.properties";
 
                         PdfContentByte cb = pdfwriter.getDirectContent();
@@ -513,7 +514,7 @@ public class GeoReportServlet extends HttpServlet {
                                                                 String foreignDoc = resultSet.getString(1);
                                                                 String foreignDocImportPage = resultSet.getString(2);
                                                                 String foreignDocType = resultSet.getString(3);
-                                                                drawForeignPDFPages(foreignDoc, foreignDocImportPage, foreignDocType, document, pdfwriter);
+                                                                drawForeignPDFPages(configFilePath, foreignDoc, foreignDocImportPage, foreignDocType, document, pdfwriter);
                                                             }
                                                         } catch (SQLException e) {
                                                             logger.error("Database error: {}", e.getMessage());
@@ -609,7 +610,7 @@ public class GeoReportServlet extends HttpServlet {
                                                                             FeatureURL = FeatureURL.replaceAll("@featurekey", keyEncode4URL(featKey));
                                                                             FeatureURL = FeatureURL.replaceAll("@databasekey", keyEncode4URL(dataKey));
                                                                             FeatureURL = FeatureURL.replaceAll("@referencekey", keyEncode4URL(refKey));
-                                                                            if (isURLReachable(FeatureURL)) {
+                                                                            if (isURLReachable(FeatureURL, configFilePath)) {
                                                                                 ogr.RegisterAll();
                                                                                 if (FeatureURL.startsWith("https")) {
                                                                                     if (Objects.equals(gdal.GetConfigOption("GDAL_HTTP_UNSAFESSL", "NO"), "NO")) {
@@ -651,7 +652,7 @@ public class GeoReportServlet extends HttpServlet {
                                                                             FeatureURL = FeatureURL.replaceAll("@featurekey", keyEncode4URL(featKey));
                                                                             FeatureURL = FeatureURL.replaceAll("@databasekey", keyEncode4URL(dataKey));
                                                                             FeatureURL = FeatureURL.replaceAll("@referencekey", keyEncode4URL(refKey));
-                                                                            if (isURLReachable(FeatureURL)) {
+                                                                            if (isURLReachable(FeatureURL, configFilePath)) {
                                                                                 ogr.RegisterAll();
                                                                                 if (FeatureURL.startsWith("https")) {
                                                                                     if (Objects.equals(gdal.GetConfigOption("GDAL_HTTP_UNSAFESSL", "NO"), "NO")) {
@@ -763,7 +764,7 @@ public class GeoReportServlet extends HttpServlet {
                                                                                 FeatureURL = FeatureURL.replaceAll("@featurekey", keyEncode4URL(featKey));
                                                                                 FeatureURL = FeatureURL.replaceAll("@databasekey", keyEncode4URL(dataKey));
                                                                                 FeatureURL = FeatureURL.replaceAll("@referencekey", keyEncode4URL(refKey));
-                                                                                if (isURLReachable(FeatureURL)) {
+                                                                                if (isURLReachable(FeatureURL, configFilePath)) {
                                                                                     ogr.RegisterAll();
                                                                                     if (FeatureURL.startsWith("https")) {
                                                                                         if (Objects.equals(gdal.GetConfigOption("GDAL_HTTP_UNSAFESSL", "NO"), "NO")) {
@@ -1031,7 +1032,7 @@ public class GeoReportServlet extends HttpServlet {
 
                                                                     //get map image here
                                                                     //MapImageURL
-                                                                    if (isURLReachable(MapImageURL)) {
+                                                                    if (isURLReachable(MapImageURL, configFilePath)) {
                                                                         String scaleFactor = "" + (1 / Double.parseDouble(MapImageScaleFactor));
 
                                                                         drawImageFromURI(MapImageURL, MapImageX, MapImageY, scaleFactor, document);
@@ -2033,7 +2034,7 @@ public class GeoReportServlet extends HttpServlet {
                                                                     DataSource dsOgr;
                                                                     // Initialise ogr layer
                                                                     Layer layer1;
-                                                                    if(isURLReachable(dataURL)) {
+                                                                    if(isURLReachable(dataURL, configFilePath)) {
                                                                         ogr.RegisterAll();
                                                                         if (dataURL.startsWith("https")) {
                                                                             if (Objects.equals(gdal.GetConfigOption("GDAL_HTTP_UNSAFESSL", "NO"), "NO")) {
@@ -3140,14 +3141,16 @@ public class GeoReportServlet extends HttpServlet {
     }
 
 
-    private boolean isURLReachable(String urlString) {
+    private boolean isURLReachable(String urlString, String configPropertiesFile) throws IOException {
         int responseCode = 0;
+        Properties urlConfigs = new Properties();
+        urlConfigs.load(new FileInputStream(configPropertiesFile));
         try {
             URL url = new URL(urlString);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.setRequestMethod("HEAD"); // Use HEAD for a faster check
-            connection.setConnectTimeout(10000);
-            connection.setReadTimeout(10000);
+            connection.setRequestMethod(urlConfigs.getProperty("url.reachableMethod")); // Use HEAD for a faster check
+            connection.setConnectTimeout(Integer.parseInt(urlConfigs.getProperty("url.connectTimeout")));
+            connection.setReadTimeout(Integer.parseInt(urlConfigs.getProperty("url.readTimeout")));
             responseCode = connection.getResponseCode();
             connection.disconnect();
             return (responseCode >= 200 && responseCode < 300);
@@ -3203,6 +3206,8 @@ public class GeoReportServlet extends HttpServlet {
 
         } catch (IOException | ClassNotFoundException | SQLException | IllegalArgumentException e) {
             logger.error(e.getMessage());
+            logger.error(Arrays.toString(e.getStackTrace()));
+            logger.error("SQL: " + sqlQuery);
         }
         return null;
     }
@@ -3220,12 +3225,12 @@ public class GeoReportServlet extends HttpServlet {
         return totalRows ;
     }
 
-    private void drawForeignPDFPages(String foreignDoc, String foreignDocImportPage, String foreignDocType, Document document, PdfWriter pdfwriter) throws IOException {
+    private void drawForeignPDFPages(String configFilePath, String foreignDoc, String foreignDocImportPage, String foreignDocType, Document document, PdfWriter pdfwriter) throws IOException {
         PdfReader reader = null;
 
         if (foreignDocType.equalsIgnoreCase("web")) {
             //web
-            if (isURLReachable(foreignDoc)){
+            if (isURLReachable(foreignDoc, configFilePath)){
                 reader = new PdfReader(foreignDoc);
             }
         } else {
