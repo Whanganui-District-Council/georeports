@@ -29,12 +29,9 @@ import java.nio.file.Paths;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Objects;
-import java.util.Properties;
+import java.util.*;
+import java.util.function.Predicate;
 import java.util.regex.PatternSyntaxException;
-import java.util.Map;
 
 import org.gdal.ogr.*;
 import org.gdal.gdal.*;
@@ -66,6 +63,7 @@ import java.util.stream.Collectors;
 
 
 import java.util.concurrent.*;
+import java.util.stream.Stream;
 
 import org.apache.hc.core5.net.URIBuilder;
 
@@ -2287,29 +2285,53 @@ public class GeoReportServlet extends HttpServlet {
     }
 
     private void cleanupAbandonedFiles() {
-        logger.info("Cleaning up temporary files.");
+        logger.info("Cleaning up temporary PDF files.");
         long limit = System.currentTimeMillis() - TimeUnit.MINUTES.toMillis(20);
-        mainTasks.entrySet().removeIf(entry -> {
-            PdfTask t = entry.getValue();
-            try {
-                if (t.tempFile != null && Files.getLastModifiedTime(t.tempFile).toMillis() < limit) {
-                    Files.deleteIfExists(t.tempFile);
-                    return true;
-                }
-            } catch (IOException ignored) {}
-            return false;
-        });
-        subTasks.entrySet().removeIf(entry -> {
-            PdfTask t = entry.getValue();
-            try {
-                if (t.tempFile != null && Files.getLastModifiedTime(t.tempFile).toMillis() < limit) {
-                    Files.deleteIfExists(t.tempFile);
-                    return true;
-                }
-            } catch (IOException ignored) {}
-            return false;
-        });
 
+        // Filter for PDF files specifically
+        Predicate<Path> isPdf = path -> path.getFileName().toString().toLowerCase().endsWith(".pdf");
+
+        // 1. Cleanup expired entries from active maps
+        Predicate<Map.Entry<String, PdfTask>> isExpired = entry -> {
+            Path path = entry.getValue().tempFile;
+            try {
+                if (path != null && isPdf.test(path) && Files.getLastModifiedTime(path).toMillis() < limit) {
+                    Files.deleteIfExists(path);
+                    return true;
+                }
+            } catch (IOException ignored) {}
+            return false;
+        };
+
+        mainTasks.entrySet().removeIf(isExpired);
+        subTasks.entrySet().removeIf(isExpired);
+
+        // 2. Scan directory for "Orphaned" PDF files
+        Path tempDirectoryPath = Paths.get(System.getProperty("java.io.tmpdir"));
+
+        try (Stream<Path> files = Files.list(tempDirectoryPath)) {
+            // Collect active paths into a Set for fast lookup
+            Set<Path> activeFiles = new HashSet<>();
+            mainTasks.values().forEach(t -> { if(t.tempFile != null) activeFiles.add(t.tempFile); });
+            subTasks.values().forEach(t -> { if(t.tempFile != null) activeFiles.add(t.tempFile); });
+
+            files.filter(isPdf) // Ensure we only touch .pdf files
+                 .filter(path -> !activeFiles.contains(path))
+                 .filter(path -> {
+                     try {
+                         return Files.getLastModifiedTime(path).toMillis() < limit;
+                     } catch (IOException e) { return false; }
+                 })
+                 .forEach(path -> {
+                     try {
+                         Files.deleteIfExists(path);
+                         logger.debug("Deleted orphaned PDF: " + path.getFileName());
+                     } catch (IOException ignored) {}
+                 });
+
+        } catch (IOException e) {
+            logger.error("Failed to scan directory for PDF cleanup", e);
+        }
     }
 
     private void showUi(HttpServletRequest req, HttpServletResponse resp) throws IOException {
