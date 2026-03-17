@@ -2280,8 +2280,31 @@ public class GeoReportServlet extends HttpServlet {
             Files.deleteIfExists(task.tempFile);
             logger.info("Downloaded");
         } else {
-            resp.sendError(410, "The report has expired or failed to generate.");
+            logger.info("The report has expired or failed to generate.  Running download error handler.");
+            handleDownloadError(req, resp);
         }
+    }
+
+    public void handleDownloadError(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        String referer = req.getHeader("Referer");
+        String serverName = req.getServerName(); // e.g., "example.com"
+        String redirectUrl = ""; // Fallback path
+
+        if (referer != null) {
+            try {
+                java.net.URL url = new java.net.URL(referer);
+                // Check if the referer host matches our server host
+                if (url.getHost().equalsIgnoreCase(serverName)) {
+                    redirectUrl = referer;
+                    logger.debug("Redirecting to Referer: " + redirectUrl);
+                }
+            } catch (java.net.MalformedURLException e) {
+                // Invalid URL format, stick with fallback
+                logger.debug("Invalid URL format.  Redirecting to home: " + redirectUrl);
+            }
+        }
+
+        resp.sendRedirect(redirectUrl);
     }
 
     private void cleanupAbandonedFiles() {
