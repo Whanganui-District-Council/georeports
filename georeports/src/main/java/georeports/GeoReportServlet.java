@@ -19,9 +19,6 @@ import java.awt.*;
 import java.awt.geom.Point2D;
 import java.io.*;
 import java.net.*;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -36,7 +33,6 @@ import java.util.regex.PatternSyntaxException;
 import org.gdal.ogr.*;
 import org.gdal.gdal.*;
 import org.gdal.osr.*;
-import org.gdal.gdalconst.*;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -80,6 +76,12 @@ public class GeoReportServlet extends HttpServlet {
     private final Map<String, PdfTask> mainTasks = new ConcurrentHashMap<>();
     private final Map<String, PdfTask> subTasks = new ConcurrentHashMap<>();
     private static final int MAX_RECURSION_DEPTH = 3;
+
+    // configuration file variables
+    private final String configPath = System.getenv("CONFIGURATION_PATH");
+    private final String configFilePath = configPath + "config.properties";
+    private final String dbConfigFilePath = configPath + "db_config.properties";
+
 
     // Required params
     String report;
@@ -335,7 +337,6 @@ public class GeoReportServlet extends HttpServlet {
 
 
     private void generatePdfLogic(PdfTask task, String sessionId) throws IOException {
-        String configPath = System.getenv("CONFIGURATION_PATH");
         OutputStream os = Files.newOutputStream(task.tempFile);
         try {
             Document document = new Document();
@@ -343,7 +344,7 @@ public class GeoReportServlet extends HttpServlet {
             document.open();
 
             // Start the recursive assembly
-            assemblePdf(task, sessionId, document, pdfwriter, configPath, 0);
+            assemblePdf(task, sessionId, document, pdfwriter, 0);
 
             document.close();
             os.close();
@@ -360,7 +361,7 @@ public class GeoReportServlet extends HttpServlet {
     }
 
 
-    private void assemblePdf(PdfTask task, String sessionId, Document document, PdfWriter pdfwriter, String configPath, int depth) {
+    private void assemblePdf(PdfTask task, String sessionId, Document document, PdfWriter pdfwriter, int depth) {
         if (depth > MAX_RECURSION_DEPTH) return;
         try {
             logger.info("Temp output file created: {}", task.tempFile.toString());
@@ -415,9 +416,6 @@ public class GeoReportServlet extends HttpServlet {
                         document.addKeywords(keywords);
                         document.addAuthor(getXpathString("//Settings/Output/PDF/Metadata/Author",configDoc));
                         document.addCreator("GeoReports");
-
-                        String configFilePath = configPath + "config.properties";
-                        String dbConfigFilePath = configPath + "db_config.properties";
 
                         PdfContentByte cb = pdfwriter.getDirectContent();
 
@@ -496,7 +494,7 @@ public class GeoReportServlet extends HttpServlet {
                                                 //Handle normal Foreign Page "//Pages/Page[position()=" + iPage1 + "]/ForeignPages"
                                                 if(getXpathString("//Pages/Page[position()=" + iPage1 + "]/ForeignPages",configDoc) != null) {
                                                     //normal
-                                                    handleForeignPage(pageNode, task, sessionId, document, pdfwriter, configPath, depth);
+                                                    handleForeignPage(pageNode, task, sessionId, document, pdfwriter, depth);
                                                 }
                                                 //Handle SQL Foreign Page "//Pages/Page[position()=" + iPage1 + "]/ForeignSQLPages"
                                                 if(getXpathString("//Pages/Page[position()=" + iPage1 + "]/ForeignSQLPages",configDoc) != null) {
@@ -2178,7 +2176,7 @@ public class GeoReportServlet extends HttpServlet {
         return fontStyleValue;
     }
 
-    private void handleForeignPage(Node pageNode, PdfTask parentTask, String sessionId, Document document, PdfWriter pdfwriter, String configPath, int depth) throws Exception {
+    private void handleForeignPage(Node pageNode, PdfTask parentTask, String sessionId, Document document, PdfWriter pdfwriter, int depth) throws Exception {
         /*
         <Pages>
             <Page type="foreign">
@@ -2208,7 +2206,7 @@ public class GeoReportServlet extends HttpServlet {
                 subTasks.put(sessionId, subTask);
                 logger.info(subTask.tempFile.toString());
 
-                generateSubReport(subTask, sessionId, configPath, depth + 1);
+                generateSubReport(subTask, sessionId, depth + 1);
 
                 if (subTask.isDone && Files.size(subTask.tempFile) >= 0) {
                     PdfReader reader = new PdfReader(subTask.tempFile.toString());
@@ -2224,14 +2222,14 @@ public class GeoReportServlet extends HttpServlet {
         }
     }
 
-    private void generateSubReport(PdfTask subTask, String sessionId, String configPath, int depth) throws IOException {
+    private void generateSubReport(PdfTask subTask, String sessionId, int depth) throws IOException {
         OutputStream os = Files.newOutputStream(subTask.tempFile);
         try {
             Document subDoc = new Document();
             PdfWriter subWriter = PdfWriter.getInstance(subDoc, os);
             subDoc.open();
 
-            assemblePdf(subTask, sessionId, subDoc, subWriter, configPath, depth);
+            assemblePdf(subTask, sessionId, subDoc, subWriter, depth);
 
             subDoc.close();
             os.close();
