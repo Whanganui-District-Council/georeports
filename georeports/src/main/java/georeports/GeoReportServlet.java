@@ -2315,7 +2315,14 @@ public class GeoReportServlet extends HttpServlet {
 
     private void cleanupAbandonedFiles() {
         logger.info("Cleaning up temporary PDF files.");
-        long limit = System.currentTimeMillis() - TimeUnit.MINUTES.toMillis(20);
+
+        Properties fileConfigs = new Properties();
+        try {
+            fileConfigs.load(new FileInputStream(configFilePath));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        long limit = System.currentTimeMillis() - TimeUnit.MINUTES.toMillis(Integer.parseInt(fileConfigs.getProperty("file.tempFileLifeMinutes")));
 
         // Filter for PDF files specifically
         Predicate<Path> isPdf = path -> path.getFileName().toString().toLowerCase().endsWith(".pdf");
