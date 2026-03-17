@@ -178,12 +178,20 @@ public class GeoReportServlet extends HttpServlet {
     public void init() {
         logger.info("Initializing GeoReports...");
 
-        // Limit to 10 concurrent PDF generations to protect CPU/RAM
-        executor = Executors.newFixedThreadPool(10);
+        Properties initConfigs = new Properties();
+        try {
+            initConfigs.load(new FileInputStream(configFilePath));
 
-        // Cleanup abandoned files every 10 minutes
-        janitor = Executors.newSingleThreadScheduledExecutor();
-        janitor.scheduleAtFixedRate(this::cleanupAbandonedFiles, 10, 10, TimeUnit.MINUTES);
+            // Limit concurrent PDF generations to protect CPU/RAM
+            executor = Executors.newFixedThreadPool(Integer.parseInt(initConfigs.getProperty("init.executorThreadPoolSize")));
+
+            // Cleanup abandoned files
+            janitor = Executors.newSingleThreadScheduledExecutor();
+            janitor.scheduleAtFixedRate(this::cleanupAbandonedFiles, Integer.parseInt(initConfigs.getProperty("init.janitorCleanupDelayMinutes")), Integer.parseInt(initConfigs.getProperty("init.janitorCleanupPeriodMinutes")), TimeUnit.MINUTES);
+        } catch (IOException e) {
+            logger.info("Unable to initialise GeoReports.");
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
