@@ -475,7 +475,7 @@ public class GeoReportServlet extends HttpServlet {
                                                 Value1 = "";  //reset value string
                                                 String sqlQuery = getXpathString("//Pages/Page[position()=" + iPage1 + "]/PageGeneration/PageGenerationSQL/SQL",configDoc);
                                                 String connectionName = getXpathString("//Pages/Page[position()=" + iPage1 + "]/PageGeneration/PageGenerationSQL/SQL/@connection",configDoc); // Name of the database configuration to use
-                                                ResultSet dsProducePage = getSQLResultSet(dbConfigFilePath, connectionName, sqlQuery, featKey,refKey,dataKey);
+                                                ResultSet dsProducePage = getSQLResultSet(connectionName, sqlQuery, featKey,refKey,dataKey);
                                                 if (getRowCount(dsProducePage) > 0)
                                                 {
                                                     if (dsProducePage.next()) {
@@ -513,12 +513,12 @@ public class GeoReportServlet extends HttpServlet {
                                                         int positionValue = iForeignPage + 1;
                                                         String connectionName = getXpathString("//Pages/Page[position()=" + iPage1 + "]/ForeignSQLPages/ForeignSQLPage[position()='" + positionValue + "']/SQL/@connection",configDoc); // Name of the database configuration to use
                                                         String sqlQuery = getXpathString("//Pages/Page[position()=" + iPage1 + "]/ForeignSQLPages/ForeignSQLPage[position()='" + positionValue + "']/SQL",configDoc);
-                                                        try (ResultSet resultSet = getSQLResultSet(dbConfigFilePath, connectionName, sqlQuery, featKey,refKey,dataKey)) {
+                                                        try (ResultSet resultSet = getSQLResultSet(connectionName, sqlQuery, featKey,refKey,dataKey)) {
                                                             while (resultSet.next()) {
                                                                 String foreignDoc = resultSet.getString(1);
                                                                 String foreignDocImportPage = resultSet.getString(2);
                                                                 String foreignDocType = resultSet.getString(3);
-                                                                drawForeignPDFPages(configFilePath, foreignDoc, foreignDocImportPage, foreignDocType, document, pdfwriter);
+                                                                drawForeignPDFPages(foreignDoc, foreignDocImportPage, foreignDocType, document, pdfwriter);
                                                             }
                                                         } catch (SQLException e) {
                                                             logger.error("Database error: {}", e.getMessage());
@@ -614,7 +614,7 @@ public class GeoReportServlet extends HttpServlet {
                                                                             FeatureURL = FeatureURL.replaceAll("@featurekey", keyEncode4URL(featKey));
                                                                             FeatureURL = FeatureURL.replaceAll("@databasekey", keyEncode4URL(dataKey));
                                                                             FeatureURL = FeatureURL.replaceAll("@referencekey", keyEncode4URL(refKey));
-                                                                            if (isURLReachable(FeatureURL, configFilePath)) {
+                                                                            if (isURLReachable(FeatureURL)) {
                                                                                 ogr.RegisterAll();
                                                                                 if (FeatureURL.startsWith("https")) {
                                                                                     if (Objects.equals(gdal.GetConfigOption("GDAL_HTTP_UNSAFESSL", "NO"), "NO")) {
@@ -656,7 +656,7 @@ public class GeoReportServlet extends HttpServlet {
                                                                             FeatureURL = FeatureURL.replaceAll("@featurekey", keyEncode4URL(featKey));
                                                                             FeatureURL = FeatureURL.replaceAll("@databasekey", keyEncode4URL(dataKey));
                                                                             FeatureURL = FeatureURL.replaceAll("@referencekey", keyEncode4URL(refKey));
-                                                                            if (isURLReachable(FeatureURL, configFilePath)) {
+                                                                            if (isURLReachable(FeatureURL)) {
                                                                                 ogr.RegisterAll();
                                                                                 if (FeatureURL.startsWith("https")) {
                                                                                     if (Objects.equals(gdal.GetConfigOption("GDAL_HTTP_UNSAFESSL", "NO"), "NO")) {
@@ -702,7 +702,7 @@ public class GeoReportServlet extends HttpServlet {
                                                                             ScaleFeatureSQLTable = getXpathString("//Pages/Page[position()=" + iPage1 + "]/MapImage[position()=" + iMap1 + "]/ScaleFeature/SQL/@table", configDoc);
                                                                             ScaleFeatureSQLDialect = getXpathString("//Pages/Page[position()=" + iPage1 + "]/MapImage[position()=" + iMap1 + "]/ScaleFeature/SQL/@dialect", configDoc);
 
-                                                                            ScaleFeatureSQLConnection = getOGRConnectionString(dbConfigFilePath, ScaleFeatureSQLConnectionName);
+                                                                            ScaleFeatureSQLConnection = getOGRConnectionString(ScaleFeatureSQLConnectionName);
 
 
                                                                             String FeatureSQL = ScaleFeatureSQL;
@@ -768,7 +768,7 @@ public class GeoReportServlet extends HttpServlet {
                                                                                 FeatureURL = FeatureURL.replaceAll("@featurekey", keyEncode4URL(featKey));
                                                                                 FeatureURL = FeatureURL.replaceAll("@databasekey", keyEncode4URL(dataKey));
                                                                                 FeatureURL = FeatureURL.replaceAll("@referencekey", keyEncode4URL(refKey));
-                                                                                if (isURLReachable(FeatureURL, configFilePath)) {
+                                                                                if (isURLReachable(FeatureURL)) {
                                                                                     ogr.RegisterAll();
                                                                                     if (FeatureURL.startsWith("https")) {
                                                                                         if (Objects.equals(gdal.GetConfigOption("GDAL_HTTP_UNSAFESSL", "NO"), "NO")) {
@@ -1036,7 +1036,7 @@ public class GeoReportServlet extends HttpServlet {
 
                                                                     //get map image here
                                                                     //MapImageURL
-                                                                    if (isURLReachable(MapImageURL, configFilePath)) {
+                                                                    if (isURLReachable(MapImageURL)) {
                                                                         String scaleFactor = "" + (1 / Double.parseDouble(MapImageScaleFactor));
 
                                                                         drawImageFromURI(MapImageURL, MapImageX, MapImageY, scaleFactor, document);
@@ -1105,7 +1105,7 @@ public class GeoReportServlet extends HttpServlet {
                                                                                 //String MapFeatureSQLOGRDriver = getXpathString("SQL/@ogrDriver", currentMapFeature);
                                                                                 String MapFeatureSQLTable = getXpathString("SQL/@table", currentMapFeature);
                                                                                 String MapFeatureSQLDialect = getXpathString("SQL/@dialect", currentMapFeature);
-                                                                                String MapFeatureSQLConnection = getOGRConnectionString(dbConfigFilePath, MapFeatureSQLConnectionName);
+                                                                                String MapFeatureSQLConnection = getOGRConnectionString(MapFeatureSQLConnectionName);
 
                                                                                 String FeatureSQL = MapFeatureSQL;
                                                                                 FeatureSQL = FeatureSQL.replaceAll("@featurekey", featKey);
@@ -1517,7 +1517,7 @@ public class GeoReportServlet extends HttpServlet {
                                                                     ImageSQL = ImageSQL.replaceAll("@databasekey", dataKey);
                                                                     ImageSQL = ImageSQL.replaceAll("@referencekey", refKey);
 
-                                                                    ResultSet ImageSQLRS = getSQLResultSet(dbConfigFilePath, ImageSQLConnectionName, ImageSQL, FeatureKeys, ReferenceKey, DatabaseKey);
+                                                                    ResultSet ImageSQLRS = getSQLResultSet(ImageSQLConnectionName, ImageSQL, FeatureKeys, ReferenceKey, DatabaseKey);
 
                                                                     //to do
                                                                     //
@@ -1656,7 +1656,7 @@ public class GeoReportServlet extends HttpServlet {
                                                         String ImagePositionY = "0";
 
                                                         String ImageSQL = getXpathString("@labelText",currentImage);
-                                                        ResultSet ImageSQLDS = getSQLResultSet(dbConfigFilePath,connectionStringSQLImages,ImageSQL,featKey,refKey,dataKey);
+                                                        ResultSet ImageSQLDS = getSQLResultSet(connectionStringSQLImages,ImageSQL,featKey,refKey,dataKey);
                                                         if (getRowCount(ImageSQLDS) > 0)
                                                         {
                                                             if (ImageSQLDS.next()) {
@@ -1714,7 +1714,7 @@ public class GeoReportServlet extends HttpServlet {
                                                         Node currentLabel = XmlNodeListLabels.item(iLabel);
                                                         String LabelText = "";
                                                         String LabelSQL = getXpathString("@labelText",currentLabel);
-                                                        ResultSet LabelSQLDS = getSQLResultSet(dbConfigFilePath,connectionStringSQLLabels,LabelSQL,featKey,refKey,dataKey);
+                                                        ResultSet LabelSQLDS = getSQLResultSet(connectionStringSQLLabels,LabelSQL,featKey,refKey,dataKey);
                                                         if (getRowCount(LabelSQLDS) > 0)
                                                         {
                                                             if (LabelSQLDS.next()) {
@@ -1978,7 +1978,7 @@ public class GeoReportServlet extends HttpServlet {
                                                                     String dataColWidths = getXpathString("SQL/@colwidths",XmlCurrentSQLDataNode);
 
                                                                     // Data resultset
-                                                                    ResultSet rs = getSQLResultSet(dbConfigFilePath, dataConnection, dataSQL, featKey, refKey, dataKey);
+                                                                    ResultSet rs = getSQLResultSet(dataConnection, dataSQL, featKey, refKey, dataKey);
                                                                     ResultSetMetaData resultSetMetaData = rs.getMetaData();
 
 
@@ -2038,7 +2038,7 @@ public class GeoReportServlet extends HttpServlet {
                                                                     DataSource dsOgr;
                                                                     // Initialise ogr layer
                                                                     Layer layer1;
-                                                                    if(isURLReachable(dataURL, configFilePath)) {
+                                                                    if(isURLReachable(dataURL)) {
                                                                         ogr.RegisterAll();
                                                                         if (dataURL.startsWith("https")) {
                                                                             if (Objects.equals(gdal.GetConfigOption("GDAL_HTTP_UNSAFESSL", "NO"), "NO")) {
@@ -2671,7 +2671,7 @@ public class GeoReportServlet extends HttpServlet {
     }
 
 
-    private String getOGRConnectionString(String dbConfigFilePath, String ScaleFeatureSQLConnectionName) throws IOException {
+    private String getOGRConnectionString(String ScaleFeatureSQLConnectionName) throws IOException {
         String ScaleFeatureSQLConnection;
         Properties dbConfigs = new Properties();
         dbConfigs.load(new FileInputStream(dbConfigFilePath));
@@ -3192,10 +3192,10 @@ public class GeoReportServlet extends HttpServlet {
     }
 
 
-    private boolean isURLReachable(String urlString, String configPropertiesFile) throws IOException {
+    private boolean isURLReachable(String urlString) throws IOException {
         int responseCode = 0;
         Properties urlConfigs = new Properties();
-        urlConfigs.load(new FileInputStream(configPropertiesFile));
+        urlConfigs.load(new FileInputStream(configFilePath));
         try {
             URL url = new URL(urlString);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -3211,7 +3211,7 @@ public class GeoReportServlet extends HttpServlet {
             return false; // URL is not reachable
         }
     }
-    private ResultSet getSQLResultSet(String dbConfigFilePath, String connectionName, String sqlQuery, String FeatureKeys, String ReferenceKey, String DatabaseKey) {
+    private ResultSet getSQLResultSet(String connectionName, String sqlQuery, String FeatureKeys, String ReferenceKey, String DatabaseKey) {
         sqlQuery = sqlQuery.replaceAll("@featurekey", FeatureKeys);
         if (!Objects.equals(ReferenceKey, "")){
             //sqlQuery = sqlQuery.replaceAll("'@referencekey'", ReferenceKey);
@@ -3276,12 +3276,12 @@ public class GeoReportServlet extends HttpServlet {
         return totalRows ;
     }
 
-    private void drawForeignPDFPages(String configFilePath, String foreignDoc, String foreignDocImportPage, String foreignDocType, Document document, PdfWriter pdfwriter) throws IOException {
+    private void drawForeignPDFPages(String foreignDoc, String foreignDocImportPage, String foreignDocType, Document document, PdfWriter pdfwriter) throws IOException {
         PdfReader reader = null;
 
         if (foreignDocType.equalsIgnoreCase("web")) {
             //web
-            if (isURLReachable(foreignDoc, configFilePath)){
+            if (isURLReachable(foreignDoc)){
                 reader = new PdfReader(foreignDoc);
             }
         } else {
