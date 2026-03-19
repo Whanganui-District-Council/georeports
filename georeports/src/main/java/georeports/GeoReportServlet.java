@@ -98,50 +98,51 @@ public class GeoReportServlet extends HttpServlet {
 
     double p = 0;
 
-    int textAlignment = 0; //default to left aligned
-    float LabelPositionX = 0;
-    float LabelPositionY = 0;
-    float LabelWidth = 0;
-    float LabelHeight = 0;
-
-    // set default fonts
-    Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12, Color.BLACK);
-    Font descriptionFont = FontFactory.getFont(FontFactory.HELVETICA, 10, Color.BLACK);
-    Font headerFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, Color.BLACK);
-    Font cellFont = FontFactory.getFont(FontFactory.HELVETICA, 10, Color.BLACK);
-
-    // set default background colors
-    Color titleColor = new Color(255, 255, 255,0);
-    Color descriptionColor = new Color(255, 255, 255,0);
-    //Color headerColor = new Color(255, 255, 255,255);
-    Color headerColor = Color.LIGHT_GRAY;
-    Color cellColor = new Color(255, 255, 255,255);
-    Color alternateCellColor = new Color(245, 245, 245,255);
-
-    // set default border colors
-    Color titleBorderColor = new Color(0, 0, 0,0);
-    Color descriptionBorderColor = new Color(0, 0, 0,0);
-    Color headerBorderColor = new Color(0, 0, 0,255);
-    Color cellBorderColor = new Color(0, 0, 0,255);
-    Color alternateCellBorderColor = new Color(0, 0, 0,255);
-
-    // set default border width
-    float titleBorderWidth = 0.1f;
-    float descriptionBorderWidth = 0.1f;
-    float headerBorderWidth = 0.1f;
-    float cellBorderWidth = 0.1f;
-    float alternateCellBorderWidth = 0.1f;
-
-    // Set default Neat Scale variable for scale calculations
-    String MapImageNeatScale = "1";
-
-    String MapImageX = "0";
-    String MapImageY = "0";
-
-    String MapImageWidth = "0";
-    String MapImageHeight = "0";
-
-
+    record LabelConfig(
+            int textAlignment,
+            float LabelPositionX,
+            float LabelPositionY,
+            float LabelWidth,
+            float LabelHeight
+    ) {
+        LabelConfig withNew(int newTextAlignment,float newLabelPositionX, float newLabelPositionY,float newLabelWidth, float newLabelHeight){
+            return new LabelConfig(newTextAlignment, newLabelPositionX, newLabelPositionY, newLabelWidth, newLabelHeight);
+        }
+        LabelConfig withAlignment(int newTextAlignment){
+            return new LabelConfig(newTextAlignment, this.LabelPositionX, this.LabelPositionY, this.LabelWidth, this.LabelHeight);
+        }
+        LabelConfig withPosition(float newLabelPositionX, float newLabelPositionY){
+            return new LabelConfig(this.textAlignment, newLabelPositionX, newLabelPositionY, this.LabelWidth, this.LabelHeight);
+        }
+        LabelConfig withSize(float newLabelWidth, float newLabelHeight){
+            return new LabelConfig(this.textAlignment, this.LabelPositionX, this.LabelPositionY, newLabelWidth, newLabelHeight);
+        }
+    }
+    record TableCellConfig(
+            Font font,
+            Color backgroundColor,
+            Color borderColor,
+            float borderWidth
+    ) {
+        TableCellConfig withNew(TableCellConfig newCell){
+            return new TableCellConfig(newCell.font, newCell.backgroundColor, newCell.borderColor, newCell.borderWidth);
+        }
+        TableCellConfig withNew(Font newFont, Color newBackgroundColor, Color newBorderColor, float newBorderWidth){
+            return new TableCellConfig(newFont, newBackgroundColor, newBorderColor, newBorderWidth);
+        }
+        TableCellConfig withFont(Font newFont){
+            return new TableCellConfig(newFont, this.backgroundColor, this.borderColor, this.borderWidth);
+        }
+        TableCellConfig withBackgroundColor(Color newBackgroundColor){
+            return new TableCellConfig(this.font, newBackgroundColor, this.borderColor, this.borderWidth);
+        }
+        TableCellConfig withBorderColor(Color newBorderColor){
+            return new TableCellConfig(this.font, this.backgroundColor, newBorderColor, this.borderWidth);
+        }
+        TableCellConfig withBorderWidth(float newBorderWidth){
+            return new TableCellConfig(this.font, this.backgroundColor, this.borderColor, newBorderWidth);
+        }
+    }
 
 
     // Task state container
@@ -380,10 +381,17 @@ public class GeoReportServlet extends HttpServlet {
         try {
             logger.info("Temp output file created: {}", task.tempFile.toString());
             try {
-                report = task.reportType;
-                featKey = task.featureKey;
-                dataKey = task.databaseKey;
-                refKey = task.referenceKey;
+                String report = task.reportType;
+                String featKey = task.featureKey;
+                String dataKey = task.databaseKey;
+                String refKey = task.referenceKey;
+                String scaleRaw = task.scaleRawValue;
+                String s_epsgRaw = task.s_epsgRawValue;
+                String t_epsgRaw = task.t_epsgRawValue;
+                String xRaw = task.xRawValue;
+                String yRaw = task.yRawValue;
+
+
 
                 if (dataKey == null){ dataKey = "";}
                 if (refKey == null){ refKey = "";}
@@ -442,6 +450,50 @@ public class GeoReportServlet extends HttpServlet {
 
                         // Set defaults
                         String Value1;
+
+                        LabelConfig defaultLabel = new LabelConfig(0,0,0,0,0);
+
+                        TableCellConfig defaultTitleTableCell = new TableCellConfig(
+                                FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12, Color.BLACK),
+                                new Color(255, 255, 255,0),
+                                new Color(0, 0, 0,0),
+                                0.1f
+                        );
+                        TableCellConfig defaultDescriptionTableCell = new TableCellConfig(
+                                FontFactory.getFont(FontFactory.HELVETICA, 10, Color.BLACK),
+                                new Color(255, 255, 255,0),
+                                new Color(0, 0, 0,0),
+                                0.1f
+                        );
+                        TableCellConfig defaultHeaderTableCell = new TableCellConfig(
+                                FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, Color.BLACK),
+                                Color.LIGHT_GRAY,
+                                new Color(0, 0, 0,255),
+                                0.1f
+                        );
+                        TableCellConfig defaultCellTableCell = new TableCellConfig(
+                                FontFactory.getFont(FontFactory.HELVETICA, 10, Color.BLACK),
+                                new Color(255, 255, 255,255),
+                                new Color(0, 0, 0,255),
+                                0.1f
+                        );
+                        TableCellConfig defaultAlternateCellTableCell = new TableCellConfig(
+                                FontFactory.getFont(FontFactory.HELVETICA, 10, Color.BLACK),
+                                new Color(245, 245, 245,255),
+                                new Color(0, 0, 0,255),
+                                0.1f
+                        );
+
+
+                        // Set default Neat Scale variable for scale calculations
+                        String MapImageNeatScale = "1";
+
+                        String MapImageX = "0";
+                        String MapImageY = "0";
+
+                        String MapImageWidth = "0";
+                        String MapImageHeight = "0";
+
 
                         String connectionStringSQLLabels = "Labels";
                         if (getXpathString("//Settings/QGIS/QPTLayout/SQLConnections/Labels",configDoc) != null) {
@@ -1207,7 +1259,7 @@ public class GeoReportServlet extends HttpServlet {
                                                                                                                 //draw
                                                                                                                 cb = pdfwriter.getDirectContent();
 
-                                                                                                                drawMapFeatureEllipseFromCenter(document, cb,centerPoint,width,height,fillColor,strokeColor,strokeWidth);
+                                                                                                                drawMapFeatureEllipseFromCenter(document, cb,centerPoint,width,height,fillColor,strokeColor,strokeWidth,MapImageX,MapImageY,MapImageWidth,MapImageHeight);
                                                                                                             }
                                                                                                             break;
                                                                                                         case "image":
@@ -1250,7 +1302,7 @@ public class GeoReportServlet extends HttpServlet {
                                                                                                                 }
                                                                                                                 //draw
                                                                                                                 cb = pdfwriter.getDirectContent();
-                                                                                                                drawMapFeatureRectangleFromCenter(document, cb,centerPoint,width,height,fillColor,strokeColor,strokeWidth);
+                                                                                                                drawMapFeatureRectangleFromCenter(document, cb,centerPoint,width,height,fillColor,strokeColor,strokeWidth,MapImageX,MapImageY,MapImageWidth,MapImageHeight);
                                                                                                             }
 
                                                                                                             break;
@@ -1307,23 +1359,21 @@ public class GeoReportServlet extends HttpServlet {
                                                                                                                 int fontStyleValue = getMapFeatureTextFontStyleValue(fontStyle);
                                                                                                                 font.setStyle(fontStyleValue);
 
+
                                                                                                                 String alignment = getXpathString("@alignment",currentPointDraw);
-                                                                                                                switch (alignment) {
-                                                                                                                    case "Left":
-                                                                                                                        textAlignment = ALIGN_LEFT;
-                                                                                                                        break;
-                                                                                                                    case "Right":
-                                                                                                                        textAlignment = ALIGN_RIGHT;
-                                                                                                                        break;
-                                                                                                                    default:
-                                                                                                                        textAlignment = ALIGN_CENTER;
-                                                                                                                        break;
-                                                                                                                }
+                                                                                                                int textAlignment = switch (alignment) {
+                                                                                                                    case "Left" ->
+                                                                                                                            ALIGN_LEFT;
+                                                                                                                    case "Right" ->
+                                                                                                                            ALIGN_RIGHT;
+                                                                                                                    default ->
+                                                                                                                            ALIGN_CENTER;
+                                                                                                                };
                                                                                                                 float rotation = 0;
                                                                                                                 //draw
                                                                                                                 cb = pdfwriter.getDirectContent();
 
-                                                                                                                drawMapFeatureText(document, cb,centerPoint,pointDrawText,font,textAlignment,rotation);
+                                                                                                                drawMapFeatureText(document, cb,centerPoint,pointDrawText,font,textAlignment,rotation,MapImageX,MapImageY,MapImageWidth,MapImageHeight);
                                                                                                             }
 
                                                                                                             break;
@@ -1352,7 +1402,7 @@ public class GeoReportServlet extends HttpServlet {
                                                                                                 cb = pdfwriter.getDirectContent();
                                                                                                 cb.rectangle(Float.parseFloat(MapImageX),Float.parseFloat(MapImageY),Float.parseFloat(MapImageWidth), Float.parseFloat(MapImageHeight));
 
-                                                                                                drawMapFeatureLine(document, cb, featurePoints,strokeColor,strokeWidth);
+                                                                                                drawMapFeatureLine(document, cb, featurePoints,strokeColor,strokeWidth,MapImageX,MapImageY,MapImageWidth,MapImageHeight);
                                                                                             }
                                                                                         }
                                                                                         break;
@@ -1380,7 +1430,7 @@ public class GeoReportServlet extends HttpServlet {
                                                                                                     cb = pdfwriter.getDirectContent();
                                                                                                     cb.rectangle(Float.parseFloat(MapImageX),Float.parseFloat(MapImageY),Float.parseFloat(MapImageWidth), Float.parseFloat(MapImageHeight));
 
-                                                                                                    drawMapFeaturePolygon(document, cb, featurePoints,fillColor,strokeColor,strokeWidth);
+                                                                                                    drawMapFeaturePolygon(document, cb, featurePoints,fillColor,strokeColor,strokeWidth,MapImageX,MapImageY,MapImageWidth,MapImageHeight);
                                                                                                 }
                                                                                             }
                                                                                         }
@@ -1407,7 +1457,7 @@ public class GeoReportServlet extends HttpServlet {
                                                                                                     cb = pdfwriter.getDirectContent();
                                                                                                     cb.rectangle(Float.parseFloat(MapImageX),Float.parseFloat(MapImageY),Float.parseFloat(MapImageWidth), Float.parseFloat(MapImageHeight));
 
-                                                                                                    drawMapFeatureLine(document, cb, featurePoints,strokeColor,strokeWidth);
+                                                                                                    drawMapFeatureLine(document, cb, featurePoints,strokeColor,strokeWidth,MapImageX,MapImageY,MapImageWidth,MapImageHeight);
                                                                                                 }
                                                                                             }
                                                                                         }
@@ -1439,7 +1489,7 @@ public class GeoReportServlet extends HttpServlet {
                                                                                                         cb = pdfwriter.getDirectContent();
 
 
-                                                                                                        drawMapFeaturePolygon(document, cb, featurePoints,fillColor,strokeColor,strokeWidth);
+                                                                                                        drawMapFeaturePolygon(document, cb, featurePoints,fillColor,strokeColor,strokeWidth,MapImageX,MapImageY,MapImageWidth,MapImageHeight);
                                                                                                     }
                                                                                                 }
                                                                                             }
@@ -1705,9 +1755,9 @@ public class GeoReportServlet extends HttpServlet {
                                                         LabelText = LabelText.replaceAll("@referencekey", refKey);
                                                         if (!Objects.equals(LabelText, ""))
                                                         {
-                                                            setLabelVariables(currentLabel);
+                                                            LabelConfig thisLabel = setLabelVariables(currentLabel,defaultLabel);
                                                             Font font = setFontStylesFromQPT(currentLabel);
-                                                            drawText(cb,LabelPositionX,LabelPositionY,LabelWidth,LabelHeight,LabelText,font,textAlignment, false, document);
+                                                            drawText(cb,thisLabel.LabelPositionX,thisLabel.LabelPositionY,thisLabel.LabelWidth,thisLabel.LabelHeight,LabelText,font,thisLabel.textAlignment, false, document);
                                                         }
                                                     }
                                                 }
@@ -1733,9 +1783,9 @@ public class GeoReportServlet extends HttpServlet {
 
                                                         if (!Objects.equals(LabelText, ""))
                                                         {
-                                                            setLabelVariables(currentLabel);
+                                                            LabelConfig thisLabel = setLabelVariables(currentLabel,defaultLabel);
                                                             Font font = setFontStylesFromQPT(currentLabel);
-                                                            drawText(cb,LabelPositionX,LabelPositionY,LabelWidth,LabelHeight,LabelText,font,textAlignment, false, document);
+                                                            drawText(cb,thisLabel.LabelPositionX,thisLabel.LabelPositionY,thisLabel.LabelWidth,thisLabel.LabelHeight,LabelText,font,thisLabel.textAlignment, false, document);
                                                         }
                                                     }
                                                 }
@@ -1801,9 +1851,9 @@ public class GeoReportServlet extends HttpServlet {
                                                         LabelText = LabelText.replaceAll("@referencekey", refKey);
                                                         if (!Objects.equals(LabelText, ""))
                                                         {
-                                                            setLabelVariables(currentLabel);
+                                                            LabelConfig thisLabel = setLabelVariables(currentLabel,defaultLabel);
                                                             Font font = setFontStylesFromQPT(currentLabel);
-                                                            drawText(cb,LabelPositionX,LabelPositionY,LabelWidth,LabelHeight,LabelText,font,textAlignment, false, document);
+                                                            drawText(cb,thisLabel.LabelPositionX,thisLabel.LabelPositionY,thisLabel.LabelWidth,thisLabel.LabelHeight,LabelText,font,thisLabel.textAlignment, false, document);
                                                         }
                                                     }
                                                 }
@@ -1813,12 +1863,11 @@ public class GeoReportServlet extends HttpServlet {
                                                     if (getXpathNode("//LayoutItem[@id='ppScaleText']", layoutDoc) != null) {
                                                         Node currentLabel = getXpathNode("//LayoutItem[@id='ppScaleText']", layoutDoc);
                                                         // Set default Neat Scale variable for scale calcs
-                                                        String textScale = MapImageNeatScale;
 
-                                                        if (!Objects.equals(textScale, "")) {
-                                                            setLabelVariables(currentLabel);
+                                                        if (!Objects.equals(MapImageNeatScale, "")) {
+                                                            LabelConfig thisLabel = setLabelVariables(currentLabel,defaultLabel);
                                                             Font font = setFontStylesFromQPT(currentLabel);
-                                                            drawText(cb, LabelPositionX, LabelPositionY, LabelWidth, LabelHeight, textScale, font, textAlignment, false, document);
+                                                            drawText(cb, thisLabel.LabelPositionX, thisLabel.LabelPositionY, thisLabel.LabelWidth, thisLabel.LabelHeight, MapImageNeatScale, font, thisLabel.textAlignment, false, document);
                                                         }
                                                     }
                                                 }
@@ -1833,9 +1882,9 @@ public class GeoReportServlet extends HttpServlet {
 
                                                     if (!Objects.equals(textPageSize, ""))
                                                     {
-                                                        setLabelVariables(currentLabel);
+                                                        LabelConfig thisLabel = setLabelVariables(currentLabel,defaultLabel);
                                                         Font font = setFontStylesFromQPT(currentLabel);
-                                                        drawText(cb,LabelPositionX,LabelPositionY,LabelWidth,LabelHeight,textPageSize,font,textAlignment,false, document);
+                                                        drawText(cb,thisLabel.LabelPositionX,thisLabel.LabelPositionY,thisLabel.LabelWidth,thisLabel.LabelHeight,textPageSize,font,thisLabel.textAlignment,false, document);
                                                     }
                                                 }
 
@@ -1849,9 +1898,9 @@ public class GeoReportServlet extends HttpServlet {
 
                                                     if (!Objects.equals(textDateTime, ""))
                                                     {
-                                                        setLabelVariables(currentLabel);
+                                                        LabelConfig thisLabel = setLabelVariables(currentLabel,defaultLabel);
                                                         Font font = setFontStylesFromQPT(currentLabel);
-                                                        drawText(cb,LabelPositionX,LabelPositionY,LabelWidth,LabelHeight,textDateTime,font,textAlignment,false, document);
+                                                        drawText(cb,thisLabel.LabelPositionX,thisLabel.LabelPositionY,thisLabel.LabelWidth,thisLabel.LabelHeight,textDateTime,font,thisLabel.textAlignment,false, document);
                                                     }
                                                 }
 
@@ -1871,10 +1920,10 @@ public class GeoReportServlet extends HttpServlet {
                                                         }
                                                         if (!Objects.equals(TitleText, ""))
                                                         {
-                                                            setLabelVariables(currentLabel);
+                                                            LabelConfig thisLabel = setLabelVariables(currentLabel,defaultLabel);
                                                             Font font = setFontStylesFromQPT(currentLabel);
-                                                            drawRectangle(cb,LabelPositionX-1,LabelPositionY-1,LabelWidth+2,LabelHeight+2,getColorFromXPathNode(getXpathNode("BackgroundColor",currentLabel)),getColorFromXPathNode(getXpathNode("FrameColor",currentLabel)), 0.1f,document);
-                                                            drawText(cb,LabelPositionX,LabelPositionY,LabelWidth,LabelHeight,TitleText,font,textAlignment,true, document);
+                                                            drawRectangle(cb,thisLabel.LabelPositionX-1,thisLabel.LabelPositionY-1,thisLabel.LabelWidth+2,thisLabel.LabelHeight+2,getColorFromXPathNode(getXpathNode("BackgroundColor",currentLabel)),getColorFromXPathNode(getXpathNode("FrameColor",currentLabel)), 0.1f,document);
+                                                            drawText(cb,thisLabel.LabelPositionX,thisLabel.LabelPositionY,thisLabel.LabelWidth,thisLabel.LabelHeight,TitleText,font,thisLabel.textAlignment,true, document);
                                                         }
                                                     }
                                                 }
@@ -1904,52 +1953,27 @@ public class GeoReportServlet extends HttpServlet {
                                                     DataTableWidth = splitResult[0];
                                                     //DataTableHeight = splitResult[1];
 
-
-
-
-                                                    // reset default fonts
-                                                    titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12, Color.BLACK);
-                                                    descriptionFont = FontFactory.getFont(FontFactory.HELVETICA, 10, Color.BLACK);
-                                                    headerFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, Color.BLACK);
-                                                    cellFont = FontFactory.getFont(FontFactory.HELVETICA, 10, Color.BLACK);
-
-                                                    // reset default background colors
-                                                    titleColor = new Color(255, 255, 255,0);
-                                                    descriptionColor = new Color(255, 255, 255,0);
-                                                    //Color headerColor = new Color(255, 255, 255,255);
-                                                    headerColor = Color.LIGHT_GRAY;
-                                                    cellColor = new Color(255, 255, 255,255);
-                                                    alternateCellColor = new Color(245, 245, 245,255);
-
-                                                    // reset default border colors
-                                                    titleBorderColor = new Color(0, 0, 0,0);
-                                                    descriptionBorderColor = new Color(0, 0, 0,0);
-                                                    headerBorderColor = new Color(0, 0, 0,255);
-                                                    cellBorderColor = new Color(0, 0, 0,255);
-                                                    alternateCellBorderColor = new Color(0, 0, 0,255);
-
-                                                    // reset default border width
-                                                    titleBorderWidth = 0.1f;
-                                                    descriptionBorderWidth = 0.1f;
-                                                    headerBorderWidth = 0.1f;
-                                                    cellBorderWidth = 0.1f;
-                                                    alternateCellBorderWidth = 0.1f;
-
                                                     // Override Default Styles with QGIS Template defined styles if defined
+
+                                                    TableCellConfig titleTableCell = defaultTitleTableCell.withNew(defaultTitleTableCell);
                                                     if (getXpathNode("//LayoutItem[@id='ppDataTableTitleStyle']",layoutDoc) != null) {
-                                                        setDataStylesFromQPT("Title",getXpathNode("//LayoutItem[@id='ppDataTableTitleStyle']",layoutDoc));
+                                                        titleTableCell = setDataStylesFromQPT("Title",getXpathNode("//LayoutItem[@id='ppDataTableTitleStyle']",layoutDoc), defaultTitleTableCell);
                                                     }
+                                                    TableCellConfig descriptionTableCell = defaultDescriptionTableCell.withNew(defaultDescriptionTableCell);
                                                     if (getXpathNode("//LayoutItem[@id='ppDataTableDescriptionStyle']",layoutDoc) != null) {
-                                                        setDataStylesFromQPT("Description",getXpathNode("//LayoutItem[@id='ppDataTableDescriptionStyle']",layoutDoc));
+                                                        descriptionTableCell = setDataStylesFromQPT("Description",getXpathNode("//LayoutItem[@id='ppDataTableDescriptionStyle']",layoutDoc),defaultDescriptionTableCell);
                                                     }
+                                                    TableCellConfig headingTableCell = defaultHeaderTableCell.withNew(defaultHeaderTableCell);
                                                     if (getXpathNode("//LayoutItem[@id='ppDataTableHeadingStyle']",layoutDoc) != null) {
-                                                        setDataStylesFromQPT("Header",getXpathNode("//LayoutItem[@id='ppDataTableHeadingStyle']",layoutDoc));
+                                                        headingTableCell = setDataStylesFromQPT("Header",getXpathNode("//LayoutItem[@id='ppDataTableHeadingStyle']",layoutDoc),defaultHeaderTableCell);
                                                     }
+                                                    TableCellConfig cellTableCell = defaultCellTableCell.withNew(defaultCellTableCell);
                                                     if (getXpathNode("//LayoutItem[@id='ppDataTableRowDefaultStyle']",layoutDoc) != null) {
-                                                        setDataStylesFromQPT("Cell",getXpathNode("//LayoutItem[@id='ppDataTableRowDefaultStyle']",layoutDoc));
+                                                        cellTableCell = setDataStylesFromQPT("Cell",getXpathNode("//LayoutItem[@id='ppDataTableRowDefaultStyle']",layoutDoc),defaultCellTableCell);
                                                     }
+                                                    TableCellConfig cellAlternateTableCell = defaultAlternateCellTableCell.withNew(defaultAlternateCellTableCell);
                                                     if (getXpathNode("//LayoutItem[@id='ppDataTableRowAlternateStyle']",layoutDoc) != null) {
-                                                        setDataStylesFromQPT("CellAlternate",getXpathNode("//LayoutItem[@id='ppDataTableRowAlternateStyle']",layoutDoc));
+                                                        cellAlternateTableCell = setDataStylesFromQPT("CellAlternate",getXpathNode("//LayoutItem[@id='ppDataTableRowAlternateStyle']",layoutDoc),defaultAlternateCellTableCell);
                                                     }
 
 
@@ -1990,21 +2014,21 @@ public class GeoReportServlet extends HttpServlet {
 
                                                                     // Data Title Table
                                                                     //setDataTableSingleCell(dataCaption, titleFont, titleColor, titleBorderColor, titleBorderWidth, document);
-                                                                    SQLDataTables.get(iSQLData).add(getDataTableSingleCell(dataCaption, titleFont, titleColor, titleBorderColor, titleBorderWidth));
+                                                                    SQLDataTables.get(iSQLData).add(getDataTableSingleCell(dataCaption, titleTableCell.font, titleTableCell.backgroundColor, titleTableCell.borderColor, titleTableCell.borderWidth));
 
                                                                     if (!rs.isBeforeFirst()) {
                                                                         // No Data Message Table
                                                                         //setDataTableSingleCell(dataMessage, descriptionFont, descriptionColor, descriptionBorderColor, descriptionBorderWidth, document);
-                                                                        SQLDataTables.get(iSQLData).add(getDataTableSingleCell(dataMessage, descriptionFont, descriptionColor, descriptionBorderColor, descriptionBorderWidth));
+                                                                        SQLDataTables.get(iSQLData).add(getDataTableSingleCell(dataMessage, descriptionTableCell.font, descriptionTableCell.backgroundColor, descriptionTableCell.borderColor, descriptionTableCell.borderWidth));
                                                                     } else {
                                                                         // Data Description Table
-                                                                        PdfPTable descriptionTable = getDataTableSingleCell(dataDescription, descriptionFont, descriptionColor, descriptionBorderColor, descriptionBorderWidth);
+                                                                        PdfPTable descriptionTable = getDataTableSingleCell(dataDescription, descriptionTableCell.font, descriptionTableCell.backgroundColor, descriptionTableCell.borderColor, descriptionTableCell.borderWidth);
                                                                         if (descriptionTable.size() > 0) {
                                                                             SQLDataTables.get(iSQLData).add(descriptionTable);
                                                                         }
                                                                         // Data Table
                                                                         //setDataTableFromResultSet(resultSetMetaData, dataColWidths, headerFont, headerColor, headerBorderColor, headerBorderWidth, rs, cellFont, cellColor, cellBorderColor, cellBorderWidth, alternateCellColor, alternateCellBorderColor, alternateCellBorderWidth, document);
-                                                                        SQLDataTables.get(iSQLData).add(getDataTableFromResultSet(resultSetMetaData, dataColWidths, headerFont, headerColor, headerBorderColor, headerBorderWidth, rs, cellFont, cellColor, cellBorderColor, cellBorderWidth, alternateCellColor, alternateCellBorderColor, alternateCellBorderWidth));
+                                                                        SQLDataTables.get(iSQLData).add(getDataTableFromResultSet(resultSetMetaData, dataColWidths, headingTableCell.font, headingTableCell.backgroundColor, headingTableCell.borderColor, headingTableCell.borderWidth, rs, cellTableCell.font, cellTableCell.backgroundColor, cellTableCell.borderColor, cellTableCell.borderWidth, cellAlternateTableCell.backgroundColor, cellAlternateTableCell.borderColor, cellAlternateTableCell.borderWidth));
                                                                     }
                                                                 }
                                                             }
@@ -2093,19 +2117,19 @@ public class GeoReportServlet extends HttpServlet {
                                                                             }
 
                                                                             // Data Title Table
-                                                                            OGCWFSDataTables.get(iOGCWFS).add(getDataTableSingleCell(dataCaption, titleFont, titleColor, titleBorderColor, titleBorderWidth));
+                                                                            OGCWFSDataTables.get(iOGCWFS).add(getDataTableSingleCell(dataCaption, titleTableCell.font, titleTableCell.backgroundColor, titleTableCell.borderColor, titleTableCell.borderWidth));
 
                                                                             if(table.getRows().isEmpty()) {
                                                                                 // No Data Message Table
-                                                                                OGCWFSDataTables.get(iOGCWFS).add(getDataTableSingleCell(dataMessage, descriptionFont, descriptionColor, descriptionBorderColor, descriptionBorderWidth));
+                                                                                OGCWFSDataTables.get(iOGCWFS).add(getDataTableSingleCell(dataMessage, descriptionTableCell.font, descriptionTableCell.backgroundColor, descriptionTableCell.borderColor, descriptionTableCell.borderWidth));
                                                                             } else {
                                                                                 // Data Description Table
-                                                                                PdfPTable descriptionTable = getDataTableSingleCell(dataDescription, descriptionFont, descriptionColor, descriptionBorderColor, descriptionBorderWidth);
+                                                                                PdfPTable descriptionTable = getDataTableSingleCell(dataDescription, descriptionTableCell.font, descriptionTableCell.backgroundColor, descriptionTableCell.borderColor, descriptionTableCell.borderWidth);
                                                                                 if (descriptionTable.size() > 0) {
                                                                                     OGCWFSDataTables.get(iOGCWFS).add(descriptionTable);
                                                                                 }
                                                                                 // Data Table
-                                                                                OGCWFSDataTables.get(iOGCWFS).add(getDataTableFromRawOGCWFS(table,dataColWidths, headerFont, headerColor, headerBorderColor, headerBorderWidth, cellFont, cellColor, cellBorderColor, cellBorderWidth, alternateCellColor, alternateCellBorderColor, alternateCellBorderWidth));
+                                                                                OGCWFSDataTables.get(iOGCWFS).add(getDataTableFromRawOGCWFS(table,dataColWidths, headingTableCell.font, headingTableCell.backgroundColor, headingTableCell.borderColor, headingTableCell.borderWidth, cellTableCell.font, cellTableCell.backgroundColor, cellTableCell.borderColor, cellTableCell.borderWidth, cellAlternateTableCell.backgroundColor, cellAlternateTableCell.borderColor, cellAlternateTableCell.borderWidth));
                                                                             }
                                                                             // Cleanup
                                                                             dsOgr.delete();
@@ -2529,44 +2553,41 @@ public class GeoReportServlet extends HttpServlet {
         }
     }
 
-    private void setLabelVariables(Object currentLabel) throws XPathExpressionException {
+    private LabelConfig setLabelVariables(Object currentLabel, LabelConfig label) throws XPathExpressionException {
+        LabelConfig lp = null;
+        LabelConfig ls = null;
+        LabelConfig la = null;
+
         String[] splitResult;
         //int textAlignment = 0; //default to left aligned
         //Label position
         if (getXpathString("@position", currentLabel) != null) {
             String labelPosition = getXpathString("@position", currentLabel);
             splitResult = labelPosition.split(",");
-            LabelPositionX = Float.parseFloat(splitResult[0]);
-            LabelPositionY = Float.parseFloat(splitResult[1]);
+            lp = label.withPosition(Float.parseFloat(splitResult[0]),Float.parseFloat(splitResult[1]));
         }
         //Label size
         if (getXpathString("@size", currentLabel) != null) {
             String labelSize = getXpathString("@size", currentLabel);
             splitResult = labelSize.split(",");
-            LabelWidth = Float.parseFloat(splitResult[0]);
-            LabelHeight = Float.parseFloat(splitResult[1]);
+            ls = label.withSize(Float.parseFloat(splitResult[0]), Float.parseFloat(splitResult[1]));
         }
         //horizontal alignment
         if (getXpathString("@halign", currentLabel) != null) {
-            switch (getXpathString("@halign", currentLabel))
-            {
-                case "4":
-                    textAlignment = ALIGN_CENTER;
-                    break;
-                case "2":
-                    textAlignment = ALIGN_RIGHT;
-                    break;
-                case "8":
-                    textAlignment = 3;
-                    break;
-                default:
-                    textAlignment = ALIGN_LEFT;
-                    break;
-            }
+            la = switch (getXpathString("@halign", currentLabel)) {
+                case "4" -> label.withAlignment(ALIGN_CENTER);
+                case "2" -> label.withAlignment(ALIGN_RIGHT);
+                case "8" -> label.withAlignment(3);
+                default -> label.withAlignment(ALIGN_LEFT);
+            };
         }
+        assert la != null;
+        assert lp != null;
+        assert ls != null;
+        return (LabelConfig) label.withNew(la.textAlignment, lp.LabelPositionX, lp.LabelPositionY,ls.LabelWidth, ls.LabelHeight);
     }
 
-    private void drawMapFeatureLine(Document document, PdfContentByte cb, ArrayList<Point2D> featurePoints, Color borderColor, float borderWidth) {
+    private void drawMapFeatureLine(Document document, PdfContentByte cb, ArrayList<Point2D> featurePoints, Color borderColor, float borderWidth, String MapImageX, String MapImageY, String MapImageWidth, String MapImageHeight) {
         cb.resetRGBColorStroke();
         cb.saveState();
         //draw clipping rectangle based on map image
@@ -2586,7 +2607,7 @@ public class GeoReportServlet extends HttpServlet {
         cb.sanityCheck();
     }
 
-    private void drawMapFeaturePolygon(Document document, PdfContentByte cb, ArrayList<Point2D> featurePoints, Color backgroundColor, Color borderColor, float borderWidth) {
+    private void drawMapFeaturePolygon(Document document, PdfContentByte cb, ArrayList<Point2D> featurePoints, Color backgroundColor, Color borderColor, float borderWidth, String MapImageX, String MapImageY, String MapImageWidth, String MapImageHeight) {
         cb.resetRGBColorFill();
         cb.resetRGBColorStroke();
         cb.saveState();
@@ -2609,7 +2630,7 @@ public class GeoReportServlet extends HttpServlet {
         cb.sanityCheck();
     }
 
-    private void drawMapFeatureEllipseFromCenter(Document document, PdfContentByte cb, Point2D centerPoint, float width, float height, Color backgroundColor, Color borderColor, float borderWidth) {
+    private void drawMapFeatureEllipseFromCenter(Document document, PdfContentByte cb, Point2D centerPoint, float width, float height, Color backgroundColor, Color borderColor, float borderWidth, String MapImageX, String MapImageY, String MapImageWidth, String MapImageHeight) {
         cb.resetRGBColorFill();
         cb.resetRGBColorStroke();
         cb.saveState();
@@ -2632,7 +2653,7 @@ public class GeoReportServlet extends HttpServlet {
         cb.sanityCheck();
     }
 
-    private void drawMapFeatureRectangleFromCenter(Document document, PdfContentByte cb, Point2D centerPoint, float width, float height, Color backgroundColor, Color borderColor, float borderWidth) {
+    private void drawMapFeatureRectangleFromCenter(Document document, PdfContentByte cb, Point2D centerPoint, float width, float height, Color backgroundColor, Color borderColor, float borderWidth, String MapImageX, String MapImageY, String MapImageWidth, String MapImageHeight) {
         cb.resetRGBColorFill();
         cb.resetRGBColorStroke();
         cb.saveState();
@@ -2652,7 +2673,7 @@ public class GeoReportServlet extends HttpServlet {
         cb.sanityCheck();
     }
 
-    private void drawMapFeatureText(Document document, PdfContentByte cb, Point2D centerPoint, String text, Font font, int textAlignment, float rotation) {
+    private void drawMapFeatureText(Document document, PdfContentByte cb, Point2D centerPoint, String text, Font font, int textAlignment, float rotation, String MapImageX, String MapImageY, String MapImageWidth, String MapImageHeight) {
         cb.saveState();
         //draw clipping rectangle based on map image
         cb.rectangle(millimetersToPoints(Float.parseFloat(MapImageX)),getTopY(document,millimetersToPoints(Float.parseFloat(MapImageY)))-millimetersToPoints(Float.parseFloat(MapImageHeight)),millimetersToPoints(Float.parseFloat(MapImageWidth)), millimetersToPoints(Float.parseFloat(MapImageHeight)));
@@ -2956,95 +2977,33 @@ public class GeoReportServlet extends HttpServlet {
     }
 
 
-    private void setDataStylesFromQPT(String tableName, Object object) throws XPathExpressionException, IOException {
-        switch (tableName) {
-            case "Title":
-                if(getXpathNode("LabelFont", object) != null) {
-                    titleFont = setFontStylesFromQPT(object);
-                }
-                if (getXpathNode("BackgroundColor", object) != null) {
-                    Node nodeBackgroundColor = getXpathNode("BackgroundColor", object);
-                    titleColor = getColorFromXPathNode(nodeBackgroundColor);
-                }
-                if (getXpathNode("FrameColor", object) != null) {
-                    Node nodeFrameColor = getXpathNode("FrameColor", object);
-                    titleBorderColor = getColorFromXPathNode(nodeFrameColor);
-                }
-                if (getXpathString("@outlineWidthM", object) != null) {
-                    //outlineWidthM="0.3,mm"
-                    String[] splitResult = getXpathString("@outlineWidthM", object).split(",");
-                    titleBorderWidth = Float.parseFloat(splitResult[0]);
-                }
-                break;
-            case "Description":
-                if(getXpathNode("LabelFont", object) != null) {
-                    descriptionFont = setFontStylesFromQPT(object);
-                }
-                if (getXpathNode("BackgroundColor", object) != null) {
-                    Node nodeBackgroundColor = getXpathNode("BackgroundColor", object);
-                    descriptionColor = getColorFromXPathNode(nodeBackgroundColor);
-                }
-                if (getXpathNode("FrameColor", object) != null) {
-                    Node nodeFrameColor = getXpathNode("FrameColor", object);
-                    descriptionBorderColor = getColorFromXPathNode(nodeFrameColor);
-                }
-                if (getXpathString("@outlineWidthM", object) != null) {
-                    String[] splitResult = getXpathString("@outlineWidthM", object).split(",");
-                    descriptionBorderWidth = Float.parseFloat(splitResult[0]);
-                }
-                break;
-            case "Header":
-                if(getXpathNode("LabelFont", object) != null) {
-                    headerFont = setFontStylesFromQPT(object);
-                }
-                if (getXpathNode("BackgroundColor", object) != null) {
-                    Node nodeBackgroundColor = getXpathNode("BackgroundColor", object);
-                    headerColor = getColorFromXPathNode(nodeBackgroundColor);
-                }
-                if (getXpathNode("FrameColor", object) != null) {
-                    Node nodeFrameColor = getXpathNode("FrameColor", object);
-                    headerBorderColor = getColorFromXPathNode(nodeFrameColor);
-                }
-                if (getXpathString("@outlineWidthM", object) != null) {
-                    String[] splitResult = getXpathString("@outlineWidthM", object).split(",");
-                    headerBorderWidth = Float.parseFloat(splitResult[0]);
-                }
-                break;
-            case "Cell":
-                if(getXpathNode("LabelFont", object) != null) {
-                    cellFont = setFontStylesFromQPT(object);
-                }
-                if (getXpathNode("BackgroundColor", object) != null) {
-                    Node nodeBackgroundColor = getXpathNode("BackgroundColor", object);
-                    cellColor = getColorFromXPathNode(nodeBackgroundColor);
-                }
-                if (getXpathNode("FrameColor", object) != null) {
-                    Node nodeFrameColor = getXpathNode("FrameColor", object);
-                    cellBorderColor = getColorFromXPathNode(nodeFrameColor);
-                }
-                if (getXpathString("@outlineWidthM", object) != null) {
-                    String[] splitResult = getXpathString("@outlineWidthM", object).split(",");
-                    cellBorderWidth = Float.parseFloat(splitResult[0]);
-                }
-                break;
-            case "CellAlternate":
-                if(getXpathNode("LabelFont", object) != null) {
-                    cellFont = setFontStylesFromQPT(object);
-                }
-                if (getXpathNode("BackgroundColor", object) != null) {
-                    Node nodeBackgroundColor = getXpathNode("BackgroundColor", object);
-                    alternateCellColor = getColorFromXPathNode(nodeBackgroundColor);
-                }
-                if (getXpathNode("FrameColor", object) != null) {
-                    Node nodeFrameColor = getXpathNode("FrameColor", object);
-                    alternateCellBorderColor = getColorFromXPathNode(nodeFrameColor);
-                }
-                if (getXpathString("@outlineWidthM", object) != null) {
-                    String[] splitResult = getXpathString("@outlineWidthM", object).split(",");
-                    alternateCellBorderWidth = Float.parseFloat(splitResult[0]);
-                }
-                break;
+    private TableCellConfig setDataStylesFromQPT(String tableName, Object object, TableCellConfig tableCell) throws XPathExpressionException, IOException {
+        TableCellConfig tf = null;
+        TableCellConfig tbc = null;
+        TableCellConfig tfc = null;
+        TableCellConfig tow = null;
+
+        if(getXpathNode("LabelFont", object) != null) {
+            tf = tableCell.withFont(setFontStylesFromQPT(object));
         }
+        if (getXpathNode("BackgroundColor", object) != null) {
+            Node nodeBackgroundColor = getXpathNode("BackgroundColor", object);
+             tbc = tableCell.withBackgroundColor(getColorFromXPathNode(nodeBackgroundColor));
+        }
+        if (getXpathNode("FrameColor", object) != null) {
+            Node nodeFrameColor = getXpathNode("FrameColor", object);
+            tfc = tableCell.withBorderColor(getColorFromXPathNode(nodeFrameColor));
+        }
+        if (getXpathString("@outlineWidthM", object) != null) {
+            //outlineWidthM="0.3,mm"
+            String[] splitResult = getXpathString("@outlineWidthM", object).split(",");
+            tow = tableCell.withBorderWidth(Float.parseFloat(splitResult[0]));
+        }
+        assert tf != null;
+        assert tbc != null;
+        assert tfc != null;
+        assert tow != null;
+        return (TableCellConfig) tableCell.withNew(tf.font, tbc.backgroundColor, tfc.borderColor, tow.borderWidth);
     }
 
     private Font setFontStylesFromQPT(Object object) throws XPathExpressionException, IOException {
