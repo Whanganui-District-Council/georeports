@@ -425,6 +425,10 @@ public class GeoReportServlet extends HttpServlet {
                         File configXMLFile = new File(myConfigFilePath);
 
                         DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+                        dbFactory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+                        dbFactory.setFeature("http://xml.org/sax/features/external-general-entities", false);
+                        dbFactory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+
                         DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
                         org.w3c.dom.Document configDoc = dBuilder.parse(configXMLFile);
                         configDoc.getDocumentElement().normalize();
