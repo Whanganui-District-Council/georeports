@@ -2475,10 +2475,10 @@ public class GeoReportServlet extends HttpServlet {
         // required URL params
         logger.info("URL Parameters: " + req.getQueryString());
         try {
-            if(req.getParameter("report").matches("[A-z0-9-_./]+")){
+            if(req.getParameter("report").matches("[a-zA-Z0-9-_]+")){
                 report = req.getParameter("report");
             }
-            if(req.getParameter("featkey").matches("[0-9A-z\\-._* /]+")){
+            if(req.getParameter("featkey").matches("[a-zA-Z0-9-_ /]+")){
                 featKey = req.getParameter("featkey");
             }
         } catch (PatternSyntaxException | NullPointerException e) {
@@ -2487,7 +2487,7 @@ public class GeoReportServlet extends HttpServlet {
 
         //optional URL Params
         try {
-            if(req.getParameter("datakey").matches("[0-9A-z\\-._* /]+")){
+            if(req.getParameter("datakey").matches("[a-zA-Z0-9-_ /]+")){
                 dataKey = req.getParameter("datakey");
             }
         } catch (PatternSyntaxException e) {
@@ -2496,7 +2496,7 @@ public class GeoReportServlet extends HttpServlet {
             logger.debug("datakey is null");
         }
         try {
-            if(req.getParameter("refkey").matches("[0-9A-z\\-._* /]+")){
+            if(req.getParameter("refkey").matches("[a-zA-Z0-9-_ /]+")){
                 refKey = req.getParameter("refkey");
             }
         } catch (PatternSyntaxException e) {
