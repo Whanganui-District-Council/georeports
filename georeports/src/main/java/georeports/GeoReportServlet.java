@@ -192,6 +192,7 @@ public class GeoReportServlet extends HttpServlet {
             logger.info("Unable to initialise GeoReports.");
             throw new RuntimeException(e);
         }
+        logger.info("GeoReports Initialized.");
     }
 
     @Override
@@ -227,6 +228,8 @@ public class GeoReportServlet extends HttpServlet {
         if (xRaw == null){ xRaw = "";}
         if (yRaw == null){ yRaw = "";}
 
+        MDC.put("sessionId", sessionId);
+
         logger.info("New direct request: Session={}, Report={}, FeatKey={}", sessionId, report, featKey);
 
         PdfTask task = new PdfTask(report, featKey, dataKey, refKey, scaleRaw, s_epsgRaw, t_epsgRaw, xRaw, yRaw);
@@ -241,6 +244,9 @@ public class GeoReportServlet extends HttpServlet {
             Files.copy(task.tempFile, resp.getOutputStream());
             Files.deleteIfExists(task.tempFile);
         }
+
+
+        MDC.clear();
     }
 
 
@@ -2459,7 +2465,7 @@ public class GeoReportServlet extends HttpServlet {
         } catch (PatternSyntaxException e) {
             logger.error(e.getMessage());
         } catch (NullPointerException e) {
-            logger.info("datakey is null");
+            logger.debug("datakey is null");
         }
         try {
             if(req.getParameter("refkey").matches("[0-9A-z\\-._* /]+")){
@@ -2468,7 +2474,7 @@ public class GeoReportServlet extends HttpServlet {
         } catch (PatternSyntaxException e) {
             logger.error(e.getMessage());
         } catch (NullPointerException e) {
-            logger.info("refkey is null");
+            logger.debug("refkey is null");
         }
 
         // scaleRaw
@@ -2479,7 +2485,7 @@ public class GeoReportServlet extends HttpServlet {
         } catch (PatternSyntaxException e) {
             logger.error(e.getMessage());
         } catch (NullPointerException e) {
-            logger.info("scale is null");
+            logger.debug("scale is null");
         }
         // s_epsgRaw
         try {
@@ -2489,7 +2495,7 @@ public class GeoReportServlet extends HttpServlet {
         } catch (PatternSyntaxException e) {
             logger.error(e.getMessage());
         } catch (NullPointerException e) {
-            logger.info("s_epsg is null");
+            logger.debug("s_epsg is null");
         }
         // t_epsgRaw
         try {
@@ -2499,7 +2505,7 @@ public class GeoReportServlet extends HttpServlet {
         } catch (PatternSyntaxException e) {
             logger.error(e.getMessage());
         } catch (NullPointerException e) {
-            logger.info("t_epsg is null");
+            logger.debug("t_epsg is null");
         }
         // xRaw
         try {
@@ -2509,7 +2515,7 @@ public class GeoReportServlet extends HttpServlet {
         } catch (PatternSyntaxException e) {
             logger.error(e.getMessage());
         } catch (NullPointerException e) {
-            logger.info("x is null");
+            logger.debug("x is null");
         }
         // yRaw
         try {
@@ -2519,7 +2525,7 @@ public class GeoReportServlet extends HttpServlet {
         } catch (PatternSyntaxException e) {
             logger.error(e.getMessage());
         } catch (NullPointerException e) {
-            logger.info("y is null");
+            logger.debug("y is null");
         }
     }
 
