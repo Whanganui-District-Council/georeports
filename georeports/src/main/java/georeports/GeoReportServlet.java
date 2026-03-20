@@ -492,11 +492,11 @@ public class GeoReportServlet extends HttpServlet {
                         // Set default Neat Scale variable for scale calculations
                         String MapImageNeatScale = "1";
 
-                        String MapImageX = "0";
-                        String MapImageY = "0";
+                        String MapImageX;
+                        String MapImageY;
 
-                        String MapImageWidth = "0";
-                        String MapImageHeight = "0";
+                        String MapImageWidth;
+                        String MapImageHeight;
 
 
                         String connectionStringSQLLabels = "Labels";
@@ -1961,23 +1961,23 @@ public class GeoReportServlet extends HttpServlet {
 
                                                     TableCellConfig titleTableCell = defaultTitleTableCell.withNew(defaultTitleTableCell);
                                                     if (getXpathNode("//LayoutItem[@id='ppDataTableTitleStyle']",layoutDoc) != null) {
-                                                        titleTableCell = setDataStylesFromQPT("Title",getXpathNode("//LayoutItem[@id='ppDataTableTitleStyle']",layoutDoc), defaultTitleTableCell);
+                                                        titleTableCell = setDataStylesFromQPT(getXpathNode("//LayoutItem[@id='ppDataTableTitleStyle']",layoutDoc), defaultTitleTableCell);
                                                     }
                                                     TableCellConfig descriptionTableCell = defaultDescriptionTableCell.withNew(defaultDescriptionTableCell);
                                                     if (getXpathNode("//LayoutItem[@id='ppDataTableDescriptionStyle']",layoutDoc) != null) {
-                                                        descriptionTableCell = setDataStylesFromQPT("Description",getXpathNode("//LayoutItem[@id='ppDataTableDescriptionStyle']",layoutDoc),defaultDescriptionTableCell);
+                                                        descriptionTableCell = setDataStylesFromQPT(getXpathNode("//LayoutItem[@id='ppDataTableDescriptionStyle']",layoutDoc),defaultDescriptionTableCell);
                                                     }
                                                     TableCellConfig headingTableCell = defaultHeaderTableCell.withNew(defaultHeaderTableCell);
                                                     if (getXpathNode("//LayoutItem[@id='ppDataTableHeadingStyle']",layoutDoc) != null) {
-                                                        headingTableCell = setDataStylesFromQPT("Header",getXpathNode("//LayoutItem[@id='ppDataTableHeadingStyle']",layoutDoc),defaultHeaderTableCell);
+                                                        headingTableCell = setDataStylesFromQPT(getXpathNode("//LayoutItem[@id='ppDataTableHeadingStyle']",layoutDoc),defaultHeaderTableCell);
                                                     }
                                                     TableCellConfig cellTableCell = defaultCellTableCell.withNew(defaultCellTableCell);
                                                     if (getXpathNode("//LayoutItem[@id='ppDataTableRowDefaultStyle']",layoutDoc) != null) {
-                                                        cellTableCell = setDataStylesFromQPT("Cell",getXpathNode("//LayoutItem[@id='ppDataTableRowDefaultStyle']",layoutDoc),defaultCellTableCell);
+                                                        cellTableCell = setDataStylesFromQPT(getXpathNode("//LayoutItem[@id='ppDataTableRowDefaultStyle']",layoutDoc),defaultCellTableCell);
                                                     }
                                                     TableCellConfig cellAlternateTableCell = defaultAlternateCellTableCell.withNew(defaultAlternateCellTableCell);
                                                     if (getXpathNode("//LayoutItem[@id='ppDataTableRowAlternateStyle']",layoutDoc) != null) {
-                                                        cellAlternateTableCell = setDataStylesFromQPT("CellAlternate",getXpathNode("//LayoutItem[@id='ppDataTableRowAlternateStyle']",layoutDoc),defaultAlternateCellTableCell);
+                                                        cellAlternateTableCell = setDataStylesFromQPT(getXpathNode("//LayoutItem[@id='ppDataTableRowAlternateStyle']",layoutDoc),defaultAlternateCellTableCell);
                                                     }
 
 
@@ -2588,7 +2588,7 @@ public class GeoReportServlet extends HttpServlet {
         assert la != null;
         assert lp != null;
         assert ls != null;
-        return (LabelConfig) label.withNew(la.textAlignment, lp.LabelPositionX, lp.LabelPositionY,ls.LabelWidth, ls.LabelHeight);
+        return label.withNew(la.textAlignment, lp.LabelPositionX, lp.LabelPositionY,ls.LabelWidth, ls.LabelHeight);
     }
 
     private void drawMapFeatureLine(Document document, PdfContentByte cb, ArrayList<Point2D> featurePoints, Color borderColor, float borderWidth, String MapImageX, String MapImageY, String MapImageWidth, String MapImageHeight) {
@@ -2981,7 +2981,7 @@ public class GeoReportServlet extends HttpServlet {
     }
 
 
-    private TableCellConfig setDataStylesFromQPT(String tableName, Object object, TableCellConfig tableCell) throws XPathExpressionException, IOException {
+    private TableCellConfig setDataStylesFromQPT(Object object, TableCellConfig tableCell) throws XPathExpressionException, IOException {
         TableCellConfig tf = null;
         TableCellConfig tbc = null;
         TableCellConfig tfc = null;
@@ -3007,7 +3007,7 @@ public class GeoReportServlet extends HttpServlet {
         assert tbc != null;
         assert tfc != null;
         assert tow != null;
-        return (TableCellConfig) tableCell.withNew(tf.font, tbc.backgroundColor, tfc.borderColor, tow.borderWidth);
+        return tableCell.withNew(tf.font, tbc.backgroundColor, tfc.borderColor, tow.borderWidth);
     }
 
     private Font setFontStylesFromQPT(Object object) throws XPathExpressionException, IOException {
