@@ -23,10 +23,12 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.sql.*;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.List;
 import java.util.function.Predicate;
 import java.util.regex.PatternSyntaxException;
 
@@ -40,13 +42,6 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
-
-import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
-import java.sql.SQLException;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.Statement;
 
 import static com.lowagie.text.Utilities.millimetersToPoints;
 import static com.lowagie.text.pdf.PdfContentByte.*;
@@ -537,7 +532,7 @@ public class GeoReportServlet extends HttpServlet {
                                                 Value1 = "";  //reset value string
                                                 String sqlQuery = getXpathString("//Pages/Page[position()=" + iPage1 + "]/PageGeneration/PageGenerationSQL/SQL",configDoc);
                                                 String connectionName = getXpathString("//Pages/Page[position()=" + iPage1 + "]/PageGeneration/PageGenerationSQL/SQL/@connection",configDoc); // Name of the database configuration to use
-                                                ResultSet dsProducePage = getSQLResultSet(connectionName, sqlQuery, featKey,refKey,dataKey);
+                                                ResultSet dsProducePage = getSQLResultSet(connectionName, sqlQuery);
                                                 if (getRowCount(dsProducePage) > 0)
                                                 {
                                                     if (dsProducePage.next()) {
@@ -575,7 +570,7 @@ public class GeoReportServlet extends HttpServlet {
                                                         int positionValue = iForeignPage + 1;
                                                         String connectionName = getXpathString("//Pages/Page[position()=" + iPage1 + "]/ForeignSQLPages/ForeignSQLPage[position()='" + positionValue + "']/SQL/@connection",configDoc); // Name of the database configuration to use
                                                         String sqlQuery = getXpathString("//Pages/Page[position()=" + iPage1 + "]/ForeignSQLPages/ForeignSQLPage[position()='" + positionValue + "']/SQL",configDoc);
-                                                        try (ResultSet resultSet = getSQLResultSet(connectionName, sqlQuery, featKey,refKey,dataKey)) {
+                                                        try (ResultSet resultSet = getSQLResultSet(connectionName, sqlQuery)) {
                                                             while (resultSet.next()) {
                                                                 String foreignDoc = resultSet.getString(1);
                                                                 String foreignDocImportPage = resultSet.getString(2);
@@ -1577,7 +1572,7 @@ public class GeoReportServlet extends HttpServlet {
                                                                     ImageSQL = ImageSQL.replaceAll("@databasekey", dataKey);
                                                                     ImageSQL = ImageSQL.replaceAll("@referencekey", refKey);
 
-                                                                    ResultSet ImageSQLRS = getSQLResultSet(ImageSQLConnectionName, ImageSQL, FeatureKeys, ReferenceKey, DatabaseKey);
+                                                                    ResultSet ImageSQLRS = getSQLResultSet(ImageSQLConnectionName, ImageSQL);
 
                                                                     //to do
                                                                     //
@@ -1716,7 +1711,7 @@ public class GeoReportServlet extends HttpServlet {
                                                         String ImagePositionY = "0";
 
                                                         String ImageSQL = getXpathString("@labelText",currentImage);
-                                                        ResultSet ImageSQLDS = getSQLResultSet(connectionStringSQLImages,ImageSQL,featKey,refKey,dataKey);
+                                                        ResultSet ImageSQLDS = getSQLResultSet(connectionStringSQLImages,ImageSQL);
                                                         if (getRowCount(ImageSQLDS) > 0)
                                                         {
                                                             if (ImageSQLDS.next()) {
@@ -1774,7 +1769,7 @@ public class GeoReportServlet extends HttpServlet {
                                                         Node currentLabel = XmlNodeListLabels.item(iLabel);
                                                         String LabelText = "";
                                                         String LabelSQL = getXpathString("@labelText",currentLabel);
-                                                        ResultSet LabelSQLDS = getSQLResultSet(connectionStringSQLLabels,LabelSQL,featKey,refKey,dataKey);
+                                                        ResultSet LabelSQLDS = getSQLResultSet(connectionStringSQLLabels,LabelSQL);
                                                         if (getRowCount(LabelSQLDS) > 0)
                                                         {
                                                             if (LabelSQLDS.next()) {
@@ -2012,7 +2007,7 @@ public class GeoReportServlet extends HttpServlet {
                                                                     String dataColWidths = getXpathString("SQL/@colwidths",XmlCurrentSQLDataNode);
 
                                                                     // Data resultset
-                                                                    ResultSet rs = getSQLResultSet(dataConnection, dataSQL, featKey, refKey, dataKey);
+                                                                    ResultSet rs = getSQLResultSet(dataConnection, dataSQL);
                                                                     ResultSetMetaData resultSetMetaData = rs.getMetaData();
 
 
@@ -3187,26 +3182,66 @@ public class GeoReportServlet extends HttpServlet {
             return false; // URL is not reachable
         }
     }
-    private ResultSet getSQLResultSet(String connectionName, String sqlQuery, String FeatureKeys, String ReferenceKey, String DatabaseKey) {
-        sqlQuery = sqlQuery.replaceAll("@featurekey", FeatureKeys);
-        if (!Objects.equals(ReferenceKey, "")){
-            //sqlQuery = sqlQuery.replaceAll("'@referencekey'", ReferenceKey);
-            sqlQuery = sqlQuery.replaceAll("@referencekey", ReferenceKey);
-        }
-        if (!Objects.equals(DatabaseKey, "")){
-            //sqlQuery = sqlQuery.replaceAll("'@databasekey'", DatabaseKey);
-            sqlQuery = sqlQuery.replaceAll("@databasekey", DatabaseKey);
-        }
-        Connection connection;
-        Statement statement;
-        ResultSet resultSet;
 
+
+    private ResultSet getSQLResultSet(
+            String connectionName,
+            String sqlQuery
+    ) {
+        String data = "@featurekey:" + featKey;
+        if (dataKey != null) {
+            data = data + ",@databasekey:" + dataKey;
+        }
+        if (refKey != null) {
+            data = data + ",@referencekey:" + refKey;
+        }
+        Map<String, String> urlParams = Arrays.stream(data.split(",")) // Split into key-value strings
+                .map(s -> s.split(":")) // Split each string into a 2-element array (key, value)
+                .collect(Collectors.toMap(
+                        pair -> decode(pair[0]),              // Key
+                        pair -> pair.length > 1 ? decode(pair[1]) : "" // Value
+                ));
+
+        // 1. Define the placeholders we care about
+        String[] placeholders = {"@featurekey", "@databasekey", "@referencekey"};
+
+        // 2. Identify positions of placeholders and replace with '?'
+        List<String> orderedParams = new ArrayList<>();
+        String transformedSql = sqlQuery;
+
+        // We need to find placeholders in the order they appear in the string
+        // This simple loop replaces names with '?' while tracking the order
+        boolean found;
+        do {
+            found = false;
+            int earliestPos = Integer.MAX_VALUE;
+            String nextKey = null;
+
+            for (String key : placeholders) {
+                int pos = transformedSql.indexOf(key);
+                if (pos != -1 && pos < earliestPos) {
+                    earliestPos = pos;
+                    nextKey = key;
+                    found = true;
+                }
+            }
+
+            if (found) {
+                transformedSql = transformedSql.replaceFirst(nextKey, "?");
+                // Get the value from URL params, default to null if missing
+                logger.debug("nextKey: " + nextKey);
+                orderedParams.add(urlParams.get(nextKey));
+            }
+        } while (found);
+        logger.debug("Ordered Params: {}", orderedParams);
+
+        // 3. Prepare and bind
         try {
-            // 1. Load configuration from file
+            Connection connection;
             Properties dbConfigs = new Properties();
             dbConfigs.load(new FileInputStream(dbConfigFilePath));
 
-            // 2. Get connection details for the specified database
+            // Get connection details for the specified database
             String urlKey = connectionName + ".url";
             String userKey = connectionName + ".user";
             String passwordKey = connectionName + ".password";
@@ -3216,28 +3251,40 @@ public class GeoReportServlet extends HttpServlet {
             String dbUser = dbConfigs.getProperty(userKey);
             String dbPassword = dbConfigs.getProperty(passwordKey);
             String dbDriver = dbConfigs.getProperty(driverKey);
-
             if (dbURL == null || dbUser == null || dbPassword == null || dbDriver == null) {
                 throw new IllegalArgumentException("Missing database configuration for: " + connectionName);
             }
-
-            // 3. Load the JDBC driver
+            // Load the JDBC driver
             Class.forName(dbDriver);
-            // 4. Establish the database connection
+            // Establish the database connection
             connection = DriverManager.getConnection(dbURL, dbUser, dbPassword);
-            // 5. Create a statement and execute the query
-            statement = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
-            resultSet = statement.executeQuery(sqlQuery);
-            // 6. Process the result set
-            return resultSet;
+
+            transformedSql = transformedSql.replaceAll("'\\?'+","?");
+            PreparedStatement preparedStatement = connection.prepareStatement(transformedSql);
+            logger.debug("Ordered Params Size: {}", orderedParams.size());
+            for (int i = 0; i < orderedParams.size(); i++) {
+                String param = orderedParams.get(i);
+                logger.debug("preparedStatement string no: {} = {}", i, param);
+
+                if (param.matches("\\d+")) {
+                    preparedStatement.setInt(i + 1, Integer.parseInt(param));
+                } else {
+                    preparedStatement.setString(i + 1, param);
+                }
+            }
+
+            return preparedStatement.executeQuery();
 
         } catch (IOException | ClassNotFoundException | SQLException | IllegalArgumentException e) {
             logger.error(e.getMessage());
             logger.error(Arrays.toString(e.getStackTrace()));
-            logger.error("SQL: " + sqlQuery);
+            logger.error("SQL: {}", sqlQuery);
+            logger.error("Transformed SQL: {}", transformedSql);
         }
         return null;
     }
+
+
 
     private int getRowCount(ResultSet res){
         int totalRows;
