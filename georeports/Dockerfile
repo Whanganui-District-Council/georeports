@@ -46,6 +46,20 @@ RUN cmake .. \
 # FROM eclipse-temurin:17-jre-jammy
 FROM tomcat:9.0.116-jdk17-temurin-jammy
 
+# Prevent interactive prompts and set desired timezone
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=Pacific/Auckland
+
+# Install tzdata, configure timezone, and clean up
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends tzdata && \
+    ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && \
+    echo $TZ > /etc/timezone && \
+    rm -rf /var/lib/apt/lists/*
+
+CMD ["date"]
+
+
 RUN apt-get update && apt-get install -y \
 software-properties-common \
     curl \
