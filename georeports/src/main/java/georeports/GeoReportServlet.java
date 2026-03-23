@@ -77,21 +77,27 @@ public class GeoReportServlet extends HttpServlet {
     private final String configFilePath = configPath + "config.properties";
     private final String dbConfigFilePath = configPath + "db_config.properties";
 
-
-    // Required params
-    String report;
-    String featKey;
-
-    // Optional Params
-    String dataKey;
-    String refKey;
-    String scaleRaw;
-    String s_epsgRaw;
-    String t_epsgRaw;
-    String xRaw;
-    String yRaw;
-
     double p = 0;
+
+    record URLParamConfig(
+            String report,
+            String featKey,
+            String dataKey,
+            String refKey,
+            String scaleRaw,
+            String s_epsgRaw,
+            String t_epsgRaw,
+            String xRaw,
+            String yRaw
+    ) {
+        URLParamConfig withNew(String newreport, String newfeatKey, String newdataKey, String newrefKey, String newscaleRaw, String news_epsgRaw, String newt_epsgRaw, String newxRaw, String newyRaw){
+            return new URLParamConfig( newreport, newfeatKey, newdataKey, newrefKey, newscaleRaw, news_epsgRaw, newt_epsgRaw, newxRaw, newyRaw);
+        }
+        URLParamConfig withNewRequired(String newreport, String newfeatKey){
+            return new URLParamConfig( newreport, newfeatKey, this.dataKey, this.refKey, this.scaleRaw, this.s_epsgRaw, this.t_epsgRaw, this.xRaw, this.yRaw);
+        }
+    }
+
 
     record LabelConfig(
             int textAlignment,
@@ -214,15 +220,27 @@ public class GeoReportServlet extends HttpServlet {
     private void handleDirectStream(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         String sessionId = req.getSession().getId();
 
-        getURLParameters(req);
+        URLParamConfig urlParams = getURLParameters(req);
+        // Required params
+        String report = urlParams.report;
+        String featKey = urlParams.featKey;
 
-        if (dataKey == null){ dataKey = "";}
-        if (refKey == null){ refKey = "";}
-        if (scaleRaw == null){ scaleRaw = "";}
-        if (s_epsgRaw == null){ s_epsgRaw = "";}
-        if (t_epsgRaw == null){ t_epsgRaw = "";}
-        if (xRaw == null){ xRaw = "";}
-        if (yRaw == null){ yRaw = "";}
+        // Optional Params
+        String dataKey = urlParams.dataKey;
+        String refKey = urlParams.refKey;
+        String scaleRaw = urlParams.scaleRaw;
+        String s_epsgRaw = urlParams.s_epsgRaw;
+        String t_epsgRaw = urlParams.t_epsgRaw;
+        String xRaw = urlParams.xRaw;
+        String yRaw = urlParams.yRaw;
+
+        if (urlParams.dataKey == null){ dataKey = "";}
+        if (urlParams.refKey == null){ refKey = "";}
+        if (urlParams.scaleRaw == null){ scaleRaw = "";}
+        if (urlParams.s_epsgRaw == null){ s_epsgRaw = "";}
+        if (urlParams.t_epsgRaw == null){ t_epsgRaw = "";}
+        if (urlParams.xRaw == null){ xRaw = "";}
+        if (urlParams.yRaw == null){ yRaw = "";}
 
         MDC.put("sessionId", sessionId);
 
@@ -251,15 +269,27 @@ public class GeoReportServlet extends HttpServlet {
     private void handleProgressStream(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         String sessionId = req.getSession().getId();
 
-        getURLParameters(req);
+        URLParamConfig urlParams = getURLParameters(req);
+        // Required params
+        String report = urlParams.report;
+        String featKey = urlParams.featKey;
 
-        if (dataKey == null){ dataKey = "";}
-        if (refKey == null){ refKey = "";}
-        if (scaleRaw == null){ scaleRaw = "";}
-        if (s_epsgRaw == null){ s_epsgRaw = "";}
-        if (t_epsgRaw == null){ t_epsgRaw = "";}
-        if (xRaw == null){ xRaw = "";}
-        if (yRaw == null){ yRaw = "";}
+        // Optional Params
+        String dataKey = urlParams.dataKey;
+        String refKey = urlParams.refKey;
+        String scaleRaw = urlParams.scaleRaw;
+        String s_epsgRaw = urlParams.s_epsgRaw;
+        String t_epsgRaw = urlParams.t_epsgRaw;
+        String xRaw = urlParams.xRaw;
+        String yRaw = urlParams.yRaw;
+
+        if (urlParams.dataKey == null){ dataKey = "";}
+        if (urlParams.refKey == null){ refKey = "";}
+        if (urlParams.scaleRaw == null){ scaleRaw = "";}
+        if (urlParams.s_epsgRaw == null){ s_epsgRaw = "";}
+        if (urlParams.t_epsgRaw == null){ t_epsgRaw = "";}
+        if (urlParams.xRaw == null){ xRaw = "";}
+        if (urlParams.yRaw == null){ yRaw = "";}
 
 
 
@@ -2342,13 +2372,13 @@ public class GeoReportServlet extends HttpServlet {
 
         if (referer != null) {
             try {
-                java.net.URL url = new java.net.URL(referer);
+                URL url = new URL(referer);
                 // Check if the referer host matches our server host
                 if (url.getHost().equalsIgnoreCase(serverName)) {
                     redirectUrl = referer;
                     logger.debug("Redirecting to Referer: " + redirectUrl);
                 }
-            } catch (java.net.MalformedURLException e) {
+            } catch (MalformedURLException e) {
                 // Invalid URL format, stick with fallback
                 logger.debug("Invalid URL format.  Redirecting to home: " + redirectUrl);
             }
@@ -2415,14 +2445,27 @@ public class GeoReportServlet extends HttpServlet {
     }
 
     private void showUi(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        getURLParameters(req);
-        if (dataKey == null){ dataKey = "";}
-        if (refKey == null){ refKey = "";}
-        if (scaleRaw == null){ scaleRaw = "";}
-        if (s_epsgRaw == null){ s_epsgRaw = "";}
-        if (t_epsgRaw == null){ t_epsgRaw = "";}
-        if (xRaw == null){ xRaw = "";}
-        if (yRaw == null){ yRaw = "";}
+        URLParamConfig urlParams = getURLParameters(req);
+        // Required params
+        String report = urlParams.report;
+        String featKey = urlParams.featKey;
+
+        // Optional Params
+        String dataKey = urlParams.dataKey;
+        String refKey = urlParams.refKey;
+        String scaleRaw = urlParams.scaleRaw;
+        String s_epsgRaw = urlParams.s_epsgRaw;
+        String t_epsgRaw = urlParams.t_epsgRaw;
+        String xRaw = urlParams.xRaw;
+        String yRaw = urlParams.yRaw;
+
+        if (urlParams.dataKey == null){ dataKey = "";}
+        if (urlParams.refKey == null){ refKey = "";}
+        if (urlParams.scaleRaw == null){ scaleRaw = "";}
+        if (urlParams.s_epsgRaw == null){ s_epsgRaw = "";}
+        if (urlParams.t_epsgRaw == null){ t_epsgRaw = "";}
+        if (urlParams.xRaw == null){ xRaw = "";}
+        if (urlParams.yRaw == null){ yRaw = "";}
 
         resp.setContentType("text/html");
         resp.getWriter().println("""
@@ -2481,7 +2524,20 @@ public class GeoReportServlet extends HttpServlet {
     }
 
 
-    private void getURLParameters(HttpServletRequest req) {
+    private URLParamConfig getURLParameters(HttpServletRequest req) {
+        // Required params
+        String report = null;
+        String featKey = null;
+
+        // Optional Params
+        String dataKey = null;
+        String refKey = null;
+        String scaleRaw = null;
+        String s_epsgRaw = null;
+        String t_epsgRaw = null;
+        String xRaw = null;
+        String yRaw = null;
+
         // required URL params
         logger.info("URL Parameters: " + req.getQueryString());
         try {
@@ -2565,6 +2621,7 @@ public class GeoReportServlet extends HttpServlet {
         } catch (NullPointerException e) {
             logger.debug("y is null");
         }
+        return new URLParamConfig(report, featKey, dataKey, refKey, scaleRaw, s_epsgRaw, t_epsgRaw, xRaw, yRaw);
     }
 
     private LabelConfig setLabelVariables(Object currentLabel, LabelConfig label) throws XPathExpressionException {
