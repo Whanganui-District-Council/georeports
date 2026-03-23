@@ -535,14 +535,19 @@ public class GeoReportServlet extends HttpServlet {
                                                 Value1 = "";  //reset value string
                                                 String sqlQuery = getXpathString("//Pages/Page[position()=" + iPage1 + "]/PageGeneration/PageGenerationSQL/SQL",configDoc);
                                                 String connectionName = getXpathString("//Pages/Page[position()=" + iPage1 + "]/PageGeneration/PageGenerationSQL/SQL/@connection",configDoc); // Name of the database configuration to use
-                                                ResultSet dsProducePage = getSQLResultSet(connectionName, sqlQuery);
-                                                if (!dsProducePage.next())
-                                                {
-                                                    // empty resultset so false
-                                                    Value1 = "false";
-                                                } else {
-                                                    Value1 = dsProducePage.getString(1);
+
+                                                try (ResultSet dsProducePage = getSQLResultSet(connectionName, sqlQuery, task)){
+                                                    if (!dsProducePage.next())
+                                                    {
+                                                        // empty resultset so false
+                                                        Value1 = "false";
+                                                    } else {
+                                                        Value1 = dsProducePage.getString(1);
+                                                    }
+                                                } catch (SQLException e) {
+                                                    logger.error("Database error: {}", e.getMessage());
                                                 }
+
                                                 logger.debug("Page Generation: " + Value1);
                                                 if (Objects.equals(Value1.toLowerCase(), "true") || Objects.equals(Value1.toLowerCase(), "false"))
                                                 {
@@ -575,7 +580,7 @@ public class GeoReportServlet extends HttpServlet {
                                                         int positionValue = iForeignPage + 1;
                                                         String connectionName = getXpathString("//Pages/Page[position()=" + iPage1 + "]/ForeignSQLPages/ForeignSQLPage[position()='" + positionValue + "']/SQL/@connection",configDoc); // Name of the database configuration to use
                                                         String sqlQuery = getXpathString("//Pages/Page[position()=" + iPage1 + "]/ForeignSQLPages/ForeignSQLPage[position()='" + positionValue + "']/SQL",configDoc);
-                                                        try (ResultSet resultSet = getSQLResultSet(connectionName, sqlQuery)) {
+                                                        try (ResultSet resultSet = getSQLResultSet(connectionName, sqlQuery, task)) {
                                                             while (resultSet.next()) {
                                                                 String foreignDoc = resultSet.getString(1);
                                                                 String foreignDocImportPage = resultSet.getString(2);
@@ -1577,7 +1582,7 @@ public class GeoReportServlet extends HttpServlet {
                                                                     ImageSQL = ImageSQL.replaceAll("@databasekey", dataKey);
                                                                     ImageSQL = ImageSQL.replaceAll("@referencekey", refKey);
 
-                                                                    ResultSet ImageSQLRS = getSQLResultSet(ImageSQLConnectionName, ImageSQL);
+                                                                    ResultSet ImageSQLRS = getSQLResultSet(ImageSQLConnectionName, ImageSQL, task);
 
                                                                     //to do
                                                                     //
@@ -1716,13 +1721,17 @@ public class GeoReportServlet extends HttpServlet {
                                                         String ImagePositionY = "0";
 
                                                         String ImageSQL = getXpathString("@labelText",currentImage);
-                                                        ResultSet ImageSQLDS = getSQLResultSet(connectionStringSQLImages,ImageSQL);
-                                                        if (getRowCount(ImageSQLDS) > 0)
-                                                        {
-                                                            if (ImageSQLDS.next()) {
+
+                                                        try (ResultSet ImageSQLDS = getSQLResultSet(connectionStringSQLImages,ImageSQL, task)) {
+                                                            if (!ImageSQLDS.next()) {
+                                                                ImageSQLURI = "";
+                                                            } else                                                             {
                                                                 ImageSQLURI = ImageSQLDS.getString(1);
                                                             }
+                                                        } catch (SQLException e) {
+                                                            logger.error("Database error: {}", e.getMessage());
                                                         }
+
 
                                                         //outlineWidthM
                                                         if (getXpathString("@outlineWidthM",currentImage) != null) {
@@ -1774,16 +1783,17 @@ public class GeoReportServlet extends HttpServlet {
                                                         Node currentLabel = XmlNodeListLabels.item(iLabel);
                                                         String LabelText = "";
                                                         String LabelSQL = getXpathString("@labelText",currentLabel);
-                                                        ResultSet LabelSQLDS = getSQLResultSet(connectionStringSQLLabels,LabelSQL);
-                                                        if (getRowCount(LabelSQLDS) > 0)
-                                                        {
-                                                            if (LabelSQLDS.next()) {
+
+                                                        try (ResultSet LabelSQLDS = getSQLResultSet(connectionStringSQLLabels,LabelSQL, task)){
+                                                            if (!LabelSQLDS.next()) {
+                                                                LabelText = "";
+                                                            } else {
                                                                 LabelText = LabelSQLDS.getString(1);
                                                             }
+                                                        } catch (SQLException e) {
+                                                            logger.error("Database error: {}", e.getMessage());
                                                         }
-                                                        LabelText = LabelText.replaceAll("@featurekey", featKey);
-                                                        LabelText = LabelText.replaceAll("@databasekey", dataKey);
-                                                        LabelText = LabelText.replaceAll("@referencekey", refKey);
+
 
                                                         if (!Objects.equals(LabelText, ""))
                                                         {
@@ -2012,7 +2022,7 @@ public class GeoReportServlet extends HttpServlet {
                                                                     String dataColWidths = getXpathString("SQL/@colwidths",XmlCurrentSQLDataNode);
 
                                                                     // Data resultset
-                                                                    ResultSet rs = getSQLResultSet(dataConnection, dataSQL);
+                                                                    ResultSet rs = getSQLResultSet(dataConnection, dataSQL, task);
                                                                     ResultSetMetaData resultSetMetaData = rs.getMetaData();
 
 
@@ -3191,14 +3201,15 @@ public class GeoReportServlet extends HttpServlet {
 
     private ResultSet getSQLResultSet(
             String connectionName,
-            String sqlQuery
+            String sqlQuery,
+            PdfTask task
     ) {
-        String data = "@featurekey:" + featKey;
-        if (dataKey != null) {
-            data = data + ",@databasekey:" + dataKey;
+        String data = "@featurekey:" + task.featureKey;
+        if (task.databaseKey != null) {
+            data = data + ",@databasekey:" + task.databaseKey;
         }
-        if (refKey != null) {
-            data = data + ",@referencekey:" + refKey;
+        if (task.referenceKey != null) {
+            data = data + ",@referencekey:" + task.referenceKey;
         }
         Map<String, String> urlParams = Arrays.stream(data.split(",")) // Split into key-value strings
                 .map(s -> s.split(":")) // Split each string into a 2-element array (key, value)
