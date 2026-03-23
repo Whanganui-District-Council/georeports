@@ -44,7 +44,7 @@ RUN cmake .. \
 
 # --- STAGE 2: The Slim Runtime ---
 # FROM eclipse-temurin:17-jre-jammy
-FROM tomcat:9.0.115-jdk17-temurin-jammy
+FROM tomcat:9.0.116-jdk17-temurin-jammy
 
 RUN apt-get update && apt-get install -y \
 software-properties-common \
