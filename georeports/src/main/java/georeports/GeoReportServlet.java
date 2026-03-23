@@ -520,6 +520,8 @@ public class GeoReportServlet extends HttpServlet {
                                     p = ((double) (iPage1) / iPageTotal) * 100;
                                     task.progress = (int) abs(p);
 
+                                    logger.debug("Page Name: " + getXpathString("//Pages/Page[position()=" + iPage1 + "]/@name",configDoc));
+
                                     boolean pageGeneration = true;
                                     String includePage = getXpathString("//Pages/Page[position()=" + iPage1 + "]/PageGeneration/@include",configDoc);
                                     switch (includePage.toLowerCase()) {
@@ -528,17 +530,20 @@ public class GeoReportServlet extends HttpServlet {
                                             break;
                                         case "sql":
                                             //producePage value determined by SQL statement returning true or false
+                                            pageGeneration = true;
                                             if (getXpathString("//Pages/Page[position()=" + iPage1 + "]/PageGeneration/PageGenerationSQL/SQL",configDoc) != null){
                                                 Value1 = "";  //reset value string
                                                 String sqlQuery = getXpathString("//Pages/Page[position()=" + iPage1 + "]/PageGeneration/PageGenerationSQL/SQL",configDoc);
                                                 String connectionName = getXpathString("//Pages/Page[position()=" + iPage1 + "]/PageGeneration/PageGenerationSQL/SQL/@connection",configDoc); // Name of the database configuration to use
                                                 ResultSet dsProducePage = getSQLResultSet(connectionName, sqlQuery);
-                                                if (getRowCount(dsProducePage) > 0)
+                                                if (!dsProducePage.next())
                                                 {
-                                                    if (dsProducePage.next()) {
-                                                        Value1 = dsProducePage.getString(1);
-                                                    }
+                                                    // empty resultset so false
+                                                    Value1 = "false";
+                                                } else {
+                                                    Value1 = dsProducePage.getString(1);
                                                 }
+                                                logger.debug("Page Generation: " + Value1);
                                                 if (Objects.equals(Value1.toLowerCase(), "true") || Objects.equals(Value1.toLowerCase(), "false"))
                                                 {
                                                     pageGeneration = Boolean.parseBoolean(Value1);
@@ -3272,6 +3277,7 @@ public class GeoReportServlet extends HttpServlet {
                     preparedStatement.setString(i + 1, param);
                 }
             }
+            logger.debug("Prepared Statement: " + preparedStatement.toString());
 
             return preparedStatement.executeQuery();
 
