@@ -471,10 +471,13 @@ public class GeoReportServlet extends HttpServlet {
                         PdfContentByte cb = pdfwriter.getDirectContent();
 
                         // Register MS Core Fonts
-                        File fontDir = new File("/usr/share/fonts/truetype/msttcorefonts/");
+                        Properties fontConfigs = new Properties();
+                        fontConfigs.load(new FileInputStream(configFilePath));
+                        String fontFilePath = fontConfigs.getProperty("fonts.msttcorefonts");
+                        File fontDir = new File(fontFilePath);
                         if (!fontDir.exists() || fontDir.listFiles().length != 0) {
                             // Register the directory where mscorefonts are installed
-                            FontFactory.registerDirectory("/usr/share/fonts/truetype/msttcorefonts/");
+                            FontFactory.registerDirectory(fontFilePath);
                         }
 
                         // Set defaults
