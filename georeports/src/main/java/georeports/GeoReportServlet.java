@@ -742,6 +742,8 @@ public class GeoReportServlet extends HttpServlet {
                                                                                     OGRFeatureDiagonalLength = OGRFeatureDiagonalLength * Double.parseDouble(ScaleFeatureMultiplier);
                                                                                 }
                                                                                 FeatureScale = (OGRFeatureDiagonalLength * 1000) / PageMapImageWidthMM;
+                                                                                // Cleanup
+                                                                                dsOgr.delete();
                                                                             } else {
                                                                                 logger.error("OGCWFS Feature URL unable to be retrieved: {}", FeatureURL);
                                                                             }
@@ -787,6 +789,8 @@ public class GeoReportServlet extends HttpServlet {
                                                                                     OGRFeatureDiagonalLength = OGRFeatureDiagonalLength * Double.parseDouble(ScaleFeatureMultiplier);
                                                                                 }
                                                                                 FeatureScale = (OGRFeatureDiagonalLength * 1000) / PageMapImageWidthMM;
+                                                                                // Cleanup
+                                                                                dsOgr.delete();
                                                                             } else {
                                                                                 logger.error("esrirest/ogrgeojson Feature URL unable to be retrieved: {}", FeatureURL);
                                                                             }
@@ -843,6 +847,8 @@ public class GeoReportServlet extends HttpServlet {
                                                                                 FeatureScale = (OGRFeatureDiagonalLength * 1000) / PageMapImageWidthMM;
 
                                                                                 dsOgr.ReleaseResultSet(layer1);
+                                                                                // Cleanup
+                                                                                dsOgr.delete();
                                                                             }
                                                                             break;
                                                                         case "refkey":
@@ -907,6 +913,8 @@ public class GeoReportServlet extends HttpServlet {
                                                                                         }
                                                                                     }
                                                                                     //dsOgr.ReleaseResultSet(layer1);  // Causes: A fatal error has been detected by the Java Runtime Environment
+                                                                                    // Cleanup
+                                                                                    dsOgr.delete();
 
                                                                                     if (Objects.equals(scaleRaw, "auto")) {
                                                                                         // scale from url param is auto
@@ -1545,6 +1553,8 @@ public class GeoReportServlet extends HttpServlet {
                                                                         if (Objects.equals(MapImageMapFeatureType, "sql")) {
                                                                             dsOgr.ReleaseResultSet(layer1);
                                                                         }
+                                                                        // Cleanup
+                                                                        dsOgr.delete();
                                                                     }
                                                                 }
                                                             }
