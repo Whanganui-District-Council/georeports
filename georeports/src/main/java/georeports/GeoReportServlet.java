@@ -742,8 +742,10 @@ public class GeoReportServlet extends HttpServlet {
                                                                                     OGRFeatureDiagonalLength = OGRFeatureDiagonalLength * Double.parseDouble(ScaleFeatureMultiplier);
                                                                                 }
                                                                                 FeatureScale = (OGRFeatureDiagonalLength * 1000) / PageMapImageWidthMM;
-                                                                                // Cleanup
-                                                                                dsOgr.delete();
+                                                                                if (!(dsOgr == null)) {
+                                                                                    // Cleanup
+                                                                                    dsOgr.delete();
+                                                                                }
                                                                             } else {
                                                                                 logger.error("OGCWFS Feature URL unable to be retrieved: {}", FeatureURL);
                                                                             }
@@ -789,8 +791,10 @@ public class GeoReportServlet extends HttpServlet {
                                                                                     OGRFeatureDiagonalLength = OGRFeatureDiagonalLength * Double.parseDouble(ScaleFeatureMultiplier);
                                                                                 }
                                                                                 FeatureScale = (OGRFeatureDiagonalLength * 1000) / PageMapImageWidthMM;
-                                                                                // Cleanup
-                                                                                dsOgr.delete();
+                                                                                if (!(dsOgr == null)) {
+                                                                                    // Cleanup
+                                                                                    dsOgr.delete();
+                                                                                }
                                                                             } else {
                                                                                 logger.error("esrirest/ogrgeojson Feature URL unable to be retrieved: {}", FeatureURL);
                                                                             }
@@ -847,8 +851,10 @@ public class GeoReportServlet extends HttpServlet {
                                                                                 FeatureScale = (OGRFeatureDiagonalLength * 1000) / PageMapImageWidthMM;
 
                                                                                 dsOgr.ReleaseResultSet(layer1);
-                                                                                // Cleanup
-                                                                                dsOgr.delete();
+                                                                                if (!(dsOgr == null)) {
+                                                                                    // Cleanup
+                                                                                    dsOgr.delete();
+                                                                                }
                                                                             }
                                                                             break;
                                                                         case "refkey":
@@ -913,8 +919,10 @@ public class GeoReportServlet extends HttpServlet {
                                                                                         }
                                                                                     }
                                                                                     //dsOgr.ReleaseResultSet(layer1);  // Causes: A fatal error has been detected by the Java Runtime Environment
-                                                                                    // Cleanup
-                                                                                    dsOgr.delete();
+                                                                                    if (!(dsOgr == null)) {
+                                                                                        // Cleanup
+                                                                                        dsOgr.delete();
+                                                                                    }
 
                                                                                     if (Objects.equals(scaleRaw, "auto")) {
                                                                                         // scale from url param is auto
@@ -1550,11 +1558,10 @@ public class GeoReportServlet extends HttpServlet {
                                                                                 }
                                                                             }
                                                                         }
-                                                                        if (Objects.equals(MapImageMapFeatureType, "sql")) {
-                                                                            dsOgr.ReleaseResultSet(layer1);
+                                                                        if (!(dsOgr == null)) {
+                                                                            // Cleanup
+                                                                            dsOgr.delete();
                                                                         }
-                                                                        // Cleanup
-                                                                        dsOgr.delete();
                                                                     }
                                                                 }
                                                             }
@@ -2185,8 +2192,10 @@ public class GeoReportServlet extends HttpServlet {
                                                                                 // Data Table
                                                                                 OGCWFSDataTables.get(iOGCWFS).add(getDataTableFromRawOGCWFS(table,dataColWidths, headingTableCell.font, headingTableCell.backgroundColor, headingTableCell.borderColor, headingTableCell.borderWidth, cellTableCell.font, cellTableCell.backgroundColor, cellTableCell.borderColor, cellTableCell.borderWidth, cellAlternateTableCell.backgroundColor, cellAlternateTableCell.borderColor, cellAlternateTableCell.borderWidth));
                                                                             }
-                                                                            // Cleanup
-                                                                            dsOgr.delete();
+                                                                            if (!(dsOgr == null)) {
+                                                                                // Cleanup
+                                                                                dsOgr.delete();
+                                                                            }
                                                                         }
                                                                     }
                                                                 }
