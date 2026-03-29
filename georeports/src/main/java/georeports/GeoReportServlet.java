@@ -11,6 +11,8 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.sql.rowset.CachedRowSet;
+import javax.sql.rowset.RowSetProvider;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.xpath.*;
@@ -32,6 +34,8 @@ import java.util.List;
 import java.util.function.Predicate;
 import java.util.regex.PatternSyntaxException;
 
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 import org.gdal.ogr.*;
 import org.gdal.gdal.*;
 import org.gdal.osr.*;
@@ -145,6 +149,7 @@ public class GeoReportServlet extends HttpServlet {
         }
     }
 
+    private final Map<String, HikariDataSource> connectionPools = new HashMap<>();
 
     // Task state container
     private static class PdfTask {
@@ -180,13 +185,38 @@ public class GeoReportServlet extends HttpServlet {
     public void init() {
         logger.info("Initializing GeoReports...");
 
+        if (!new File(dbConfigFilePath).exists()) {
+            logger.error("Database configuration file missing at: {}", dbConfigFilePath);
+            return;
+        }
+
+        Properties dbConfigs = new Properties();
+        try (FileInputStream fis = new FileInputStream(dbConfigFilePath)) {
+            dbConfigs.load(fis);
+            // Find all unique prefixes (e.g., "gis", "erp") by looking for ".url" keys
+            Set<String> prefixes = new HashSet<>();
+            for (String key : dbConfigs.stringPropertyNames()) {
+                if (key.endsWith(".url")) {
+                    prefixes.add(key.substring(0, key.lastIndexOf(".")));
+                }
+            }
+            // Initialize a pool for every prefix found
+            for (String prefix : prefixes) {
+                try {
+                    setupPoolFromProps(prefix, dbConfigs);
+                } catch (Exception e) {
+                    logger.error("Failed to initialize pool for prefix: {}", prefix, e);
+                }
+            }
+        } catch (IOException e) {
+            logger.error("Error loading db_config.properties", e);
+        }
+
         Properties initConfigs = new Properties();
         try {
             initConfigs.load(new FileInputStream(configFilePath));
-
             // Limit concurrent PDF generations to protect CPU/RAM
             executor = Executors.newFixedThreadPool(Integer.parseInt(initConfigs.getProperty("init.executorThreadPoolSize")));
-
             // Cleanup abandoned files
             janitor = Executors.newSingleThreadScheduledExecutor();
             janitor.scheduleAtFixedRate(this::cleanupAbandonedFiles, Integer.parseInt(initConfigs.getProperty("init.janitorCleanupDelayMinutes")), Integer.parseInt(initConfigs.getProperty("init.janitorCleanupPeriodMinutes")), TimeUnit.MINUTES);
@@ -195,6 +225,29 @@ public class GeoReportServlet extends HttpServlet {
             throw new RuntimeException(e);
         }
         logger.info("GeoReports Initialized.");
+    }
+
+    private void setupPoolFromProps(String prefix, Properties props) {
+        String url = props.getProperty(prefix + ".url");
+        String user = props.getProperty(prefix + ".user");
+        String pass = props.getProperty(prefix + ".password");
+        String driver = props.getProperty(prefix + ".driver");
+
+        // Optional: get pool size from props, default to 5
+        int maxPoolSize = Integer.parseInt(props.getProperty(prefix + ".pool", "10"));
+
+        HikariConfig config = new HikariConfig();
+        config.setJdbcUrl(url);
+        config.setUsername(user);
+        config.setPassword(pass);
+        config.setMaximumPoolSize(maxPoolSize);
+        config.setDriverClassName(driver);
+
+        // Connection pool name (matches the prefix used in your XML)
+        config.setPoolName(prefix + "_pool");
+
+        connectionPools.put(prefix, new HikariDataSource(config));
+        logger.info("Dynamic Pool Created: [{}] linking to {}", prefix, url);
     }
 
     @Override
@@ -2798,24 +2851,10 @@ public class GeoReportServlet extends HttpServlet {
     }
 
 
-    private String getOGRConnectionString(String ScaleFeatureSQLConnectionName) throws IOException {
-        String ScaleFeatureSQLConnection;
+    private String getOGRConnectionString(String ogrConnectionName) throws IOException {
         Properties dbConfigs = new Properties();
         dbConfigs.load(new FileInputStream(dbConfigFilePath));
-
-        // 2. Get connection details for the specified database
-        String urlKey = ScaleFeatureSQLConnectionName + ".url";
-        String userKey = ScaleFeatureSQLConnectionName + ".user";
-        String passwordKey = ScaleFeatureSQLConnectionName + ".password";
-        String driverKey = ScaleFeatureSQLConnectionName + ".driver";
-
-        String dbURL = dbConfigs.getProperty(urlKey);
-        String dbUser = dbConfigs.getProperty(userKey);
-        String dbPassword = dbConfigs.getProperty(passwordKey);
-        String dbDriver = dbConfigs.getProperty(driverKey);
-
-        ScaleFeatureSQLConnection = dbDriver + ":" + dbURL + " user=" + dbUser + " password=" + dbPassword;
-        return ScaleFeatureSQLConnection;
+        return dbConfigs.getProperty("ogr." + ogrConnectionName + ".ogr");
     }
 
     private ArrayList<Point2D> getMapFeatureGeometryPoints(Geometry FeatureGeometry,
@@ -3282,7 +3321,12 @@ public class GeoReportServlet extends HttpServlet {
             String connectionName,
             String sqlQuery,
             PdfTask task
-    ) {
+    ) throws SQLException {
+        HikariDataSource ds = connectionPools.get("jdbc." + connectionName);
+        if (ds == null) {
+            throw new SQLException("No database pool configured for prefix: " + connectionName);
+        }
+
         String data = "@featurekey:" + task.featureKey;
         if (task.databaseKey != null) {
             data = data + ",@databasekey:" + task.databaseKey;
@@ -3331,31 +3375,9 @@ public class GeoReportServlet extends HttpServlet {
         logger.debug("Ordered Params: {}", orderedParams);
 
         // 3. Prepare and bind
-        try {
-            Connection connection;
-            Properties dbConfigs = new Properties();
-            dbConfigs.load(new FileInputStream(dbConfigFilePath));
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(transformedSql.replaceAll("'\\?'+","?"))) {
 
-            // Get connection details for the specified database
-            String urlKey = connectionName + ".url";
-            String userKey = connectionName + ".user";
-            String passwordKey = connectionName + ".password";
-            String driverKey = connectionName + ".driver";
-
-            String dbURL = dbConfigs.getProperty(urlKey);
-            String dbUser = dbConfigs.getProperty(userKey);
-            String dbPassword = dbConfigs.getProperty(passwordKey);
-            String dbDriver = dbConfigs.getProperty(driverKey);
-            if (dbURL == null || dbUser == null || dbPassword == null || dbDriver == null) {
-                throw new IllegalArgumentException("Missing database configuration for: " + connectionName);
-            }
-            // Load the JDBC driver
-            Class.forName(dbDriver);
-            // Establish the database connection
-            connection = DriverManager.getConnection(dbURL, dbUser, dbPassword);
-
-            transformedSql = transformedSql.replaceAll("'\\?'+","?");
-            PreparedStatement preparedStatement = connection.prepareStatement(transformedSql);
             logger.debug("Ordered Params Size: {}", orderedParams.size());
             for (int i = 0; i < orderedParams.size(); i++) {
                 String param = orderedParams.get(i);
@@ -3367,11 +3389,15 @@ public class GeoReportServlet extends HttpServlet {
                     preparedStatement.setString(i + 1, param);
                 }
             }
-            logger.debug("Prepared Statement: " + preparedStatement.toString());
+            logger.debug("Prepared Statement: {}", preparedStatement.toString());
 
-            return preparedStatement.executeQuery();
+            try (ResultSet rs = preparedStatement.executeQuery()) {
+                CachedRowSet crs = RowSetProvider.newFactory().createCachedRowSet();
+                crs.populate(rs);
+                return crs; // The connection and statement close automatically here
+            }
 
-        } catch (IOException | ClassNotFoundException | SQLException | IllegalArgumentException e) {
+        } catch (SQLException | IllegalArgumentException e) {
             logger.error(e.getMessage());
             logger.error(Arrays.toString(e.getStackTrace()));
             logger.error("SQL: {}", sqlQuery);
