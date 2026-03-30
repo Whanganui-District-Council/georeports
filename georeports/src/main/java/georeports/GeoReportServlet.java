@@ -2593,9 +2593,47 @@ public class GeoReportServlet extends HttpServlet {
 
     @Override
     public void destroy() {
-        logger.info("Shutting down GeoReports.");
-        executor.shutdownNow();
-        janitor.shutdownNow();
+        logger.info("Initiating servlet shutdown...");
+
+        // 1. Shut down the background task executors
+        if (executor != null) {
+            executor.shutdown();
+            try {
+                if (!executor.awaitTermination(5, java.util.concurrent.TimeUnit.SECONDS)) {
+                    executor.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                executor.shutdownNow();
+            }
+        }
+
+        if (janitor != null) {
+            janitor.shutdownNow();
+        }
+
+        // 2. Close all dynamic Hikari Connection Pools
+        if (connectionPools != null && !connectionPools.isEmpty()) {
+            logger.info("Closing {} database connection pools...", connectionPools.size());
+
+            for (Map.Entry<String, HikariDataSource> entry : connectionPools.entrySet()) {
+                String poolName = entry.getKey();
+                HikariDataSource ds = entry.getValue();
+
+                if (ds != null && !ds.isClosed()) {
+                    ds.close();
+                    logger.info("Closed connection pool: {}", poolName);
+                }
+            }
+            connectionPools.clear();
+        }
+
+        // 3. GDAL Cleanup (Optional but recommended for native memory)
+        // This clears the registered drivers and network cache
+        // ogr.UnregisterAll(); //no longer available in the Java bindings because it is unnecessary
+        gdal.GDALDestroyDriverManager();
+
+        logger.info("Servlet shutdown complete.");
+        super.destroy();
     }
 
 
