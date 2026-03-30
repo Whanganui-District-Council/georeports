@@ -430,6 +430,7 @@ public class GeoReportServlet extends HttpServlet {
 
 
     private void generatePdfLogic(PdfTask task, String sessionId) throws IOException {
+        MDC.put("sessionId", sessionId);
         OutputStream os = Files.newOutputStream(task.tempFile);
         try {
             Document document = new Document();
@@ -450,11 +451,11 @@ public class GeoReportServlet extends HttpServlet {
             task.isDone = true;
             logger.info("Task Done.");
         }
-
     }
 
 
     private void assemblePdf(PdfTask task, String sessionId, Document document, PdfWriter pdfwriter, int depth) {
+        MDC.put("sessionId", sessionId);
         if (depth > MAX_RECURSION_DEPTH) return;
         try {
             logger.info("Temp output file created: {}", task.tempFile.toString());
@@ -2345,8 +2346,7 @@ public class GeoReportServlet extends HttpServlet {
             </Page>
         </Pages>
          */
-
-
+        MDC.put("sessionId", sessionId);
         NodeList foreignItems = getXpathNodeList(".//ForeignPage", pageNode);
 
         for (int j = 0; j < foreignItems.getLength(); j++) {
@@ -2380,6 +2380,7 @@ public class GeoReportServlet extends HttpServlet {
     }
 
     private void generateSubReport(PdfTask subTask, String sessionId, int depth) throws IOException {
+        MDC.put("sessionId", sessionId);
         OutputStream os = Files.newOutputStream(subTask.tempFile);
         try {
             Document subDoc = new Document();
@@ -2421,8 +2422,10 @@ public class GeoReportServlet extends HttpServlet {
     }
 
     private void handleDownload(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        logger.info("Handling download");
+
         String sessionId = req.getSession().getId();
+        MDC.put("sessionId", sessionId);
+        logger.info("Handling download");
         PdfTask task = mainTasks.remove(sessionId);
 
         if (task != null && task.tempFile != null && Files.exists(task.tempFile)) {
@@ -2441,6 +2444,8 @@ public class GeoReportServlet extends HttpServlet {
     }
 
     public void handleDownloadError(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        String sessionId = req.getSession().getId();
+        MDC.put("sessionId", sessionId);
         String referer = req.getHeader("Referer");
         String serverName = req.getServerName(); // e.g., "example.com"
         String redirectUrl = ""; // Fallback path
