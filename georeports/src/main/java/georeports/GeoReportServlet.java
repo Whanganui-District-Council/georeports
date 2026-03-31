@@ -500,6 +500,9 @@ public class GeoReportServlet extends HttpServlet {
                         dbFactory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
                         dbFactory.setFeature("http://xml.org/sax/features/external-general-entities", false);
                         dbFactory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+                        dbFactory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+                        dbFactory.setXIncludeAware(false);
+                        dbFactory.setExpandEntityReferences(false);
 
                         DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
                         org.w3c.dom.Document configDoc = dBuilder.parse(configXMLFile);
