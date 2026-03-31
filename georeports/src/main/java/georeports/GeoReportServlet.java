@@ -93,14 +93,7 @@ public class GeoReportServlet extends HttpServlet {
             String t_epsgRaw,
             String xRaw,
             String yRaw
-    ) {
-        URLParamConfig withNew(String newreport, String newfeatKey, String newdataKey, String newrefKey, String newscaleRaw, String news_epsgRaw, String newt_epsgRaw, String newxRaw, String newyRaw){
-            return new URLParamConfig( newreport, newfeatKey, newdataKey, newrefKey, newscaleRaw, news_epsgRaw, newt_epsgRaw, newxRaw, newyRaw);
-        }
-        URLParamConfig withNewRequired(String newreport, String newfeatKey){
-            return new URLParamConfig( newreport, newfeatKey, this.dataKey, this.refKey, this.scaleRaw, this.s_epsgRaw, this.t_epsgRaw, this.xRaw, this.yRaw);
-        }
-    }
+    ) {}
 
 
     record LabelConfig(
@@ -607,9 +600,9 @@ public class GeoReportServlet extends HttpServlet {
                                     p = ((double) (iPage1) / iPageTotal) * 100;
                                     task.progress = (int) abs(p);
 
-                                    logger.debug("Page Name: " + getXpathString("//Pages/Page[position()=" + iPage1 + "]/@name",configDoc));
+                                    logger.debug("Page Name: {}", getXpathString("//Pages/Page[position()=" + iPage1 + "]/@name", configDoc));
 
-                                    boolean pageGeneration = true;
+                                    boolean pageGeneration;
                                     String includePage = getXpathString("//Pages/Page[position()=" + iPage1 + "]/PageGeneration/@include",configDoc);
                                     switch (includePage.toLowerCase()) {
                                         case "always", "true":
@@ -635,7 +628,7 @@ public class GeoReportServlet extends HttpServlet {
                                                     logger.error("Database error: {}", e.getMessage());
                                                 }
 
-                                                logger.debug("Page Generation: " + Value1);
+                                                logger.debug("Page Generation: {}", Value1);
                                                 if (Objects.equals(Value1.toLowerCase(), "true") || Objects.equals(Value1.toLowerCase(), "false"))
                                                 {
                                                     pageGeneration = Boolean.parseBoolean(Value1);
@@ -962,8 +955,6 @@ public class GeoReportServlet extends HttpServlet {
                                                                                                 double[] ext = new double[4];
                                                                                                 FeatureGeometry.GetEnvelope(ext);
                                                                                                 //Get centroid X and Y of envelope
-                                                                                                //OGRFeatureCentroidX = ext[0] + ((ext[1] - ext[0]) / 2);
-                                                                                                //OGRFeatureCentroidY = ext[2] + ((ext[3] - ext[2]) / 2);
                                                                                                 OGRFeatureCentroidX = (ext[0] + ext[1]) / 2;
                                                                                                 OGRFeatureCentroidY = (ext[2] + ext[3]) / 2;
 
@@ -1034,13 +1025,15 @@ public class GeoReportServlet extends HttpServlet {
                                                                     MapX = "" + OGRFeatureCentroidX;
                                                                     MapY = "" + OGRFeatureCentroidY;
                                                                     BigDecimal bd;
-                                                                    bd = new BigDecimal(OGRFeatureCentroidX - ((Double.parseDouble(MapImageNeatScale) * (Double.parseDouble(MapImageWidth) / 1000)) / 2));
+                                                                    double w = (Double.parseDouble(MapImageNeatScale) * (Double.parseDouble(MapImageWidth) / 1000)) / 2;
+                                                                    double h = (Double.parseDouble(MapImageNeatScale) * (Double.parseDouble(MapImageHeight) / 1000)) / 2;
+                                                                    bd = new BigDecimal(OGRFeatureCentroidX - w);
                                                                     MapExtentMinX = String.valueOf(bd.setScale(5, RoundingMode.HALF_UP).doubleValue());
-                                                                    bd = new BigDecimal(OGRFeatureCentroidX + ((Double.parseDouble(MapImageNeatScale) * (Double.parseDouble(MapImageWidth) / 1000)) / 2));
+                                                                    bd = new BigDecimal(OGRFeatureCentroidX + w);
                                                                     MapExtentMaxX = String.valueOf(bd.setScale(5, RoundingMode.HALF_UP).doubleValue());
-                                                                    bd = new BigDecimal(OGRFeatureCentroidY - ((Double.parseDouble(MapImageNeatScale) * (Double.parseDouble(MapImageHeight) / 1000)) / 2));
+                                                                    bd = new BigDecimal(OGRFeatureCentroidY - h);
                                                                     MapExtentMinY = String.valueOf(bd.setScale(5, RoundingMode.HALF_UP).doubleValue());
-                                                                    bd = new BigDecimal(OGRFeatureCentroidY + ((Double.parseDouble(MapImageNeatScale) * (Double.parseDouble(MapImageHeight) / 1000)) / 2));
+                                                                    bd = new BigDecimal(OGRFeatureCentroidY + h);
                                                                     MapExtentMaxY = String.valueOf(bd.setScale(5, RoundingMode.HALF_UP).doubleValue());
 
                                                                     String MapImageURL = "";
@@ -1667,37 +1660,6 @@ public class GeoReportServlet extends HttpServlet {
                                                                     String ImageURIY = getXpathString("@y",XmlCurrentFloatingImage);
                                                                     String ImageURIMultiplier = getXpathString("@multiplier",XmlCurrentFloatingImage);
                                                                     drawImageFromURI(ImageURI,ImageURIX,ImageURIY,ImageURIMultiplier,document);
-                                                                    break;
-                                                                case "sql":
-                                                                    // EXPERIMENTAL!
-                                                                    /*
-                                                                    String ImageSQL = getXpathString("SQL",XmlCurrentFloatingImage);;
-                                                                    String ImageSQLX = getXpathString("@x",XmlCurrentFloatingImage);
-                                                                    String ImageSQLY = getXpathString("@y",XmlCurrentFloatingImage);
-                                                                    String ImageSQLMultiplier = getXpathString("@multiplier",XmlCurrentFloatingImage);
-
-                                                                    String ImageSQLConnectionName = getXpathString("SQL/@connection", XmlCurrentFloatingImage);
-                                                                    //String ImageSQLOGRDriver = ((Node) configXpath.evaluate("//Pages/Page[position()=" + iPage1 + "]/MapImage[position()=" + iMap1 + "]/ScaleFeature/SQL", configDoc, XPathConstants.NODE)).getAttributes().getNamedItem("ogrDriver").getTextContent();
-                                                                    String ImageSQLTable = getXpathString("SQL/@table", XmlCurrentFloatingImage);
-                                                                    String ImageSQLDialect = getXpathString("SQL/@dialect", XmlCurrentFloatingImage);
-                                                                    String ImageSQLConnection = getOGRConnectionString(dbConfigFilePath, ImageSQLConnectionName);
-
-                                                                    ImageSQL = ImageSQL.replaceAll("@featurekey", featKey);
-                                                                    ImageSQL = ImageSQL.replaceAll("@databasekey", dataKey);
-                                                                    ImageSQL = ImageSQL.replaceAll("@referencekey", refKey);
-
-                                                                    ResultSet ImageSQLRS = getSQLResultSet(ImageSQLConnectionName, ImageSQL, task);
-
-                                                                    //to do
-                                                                    //
-
-
-
-                                                                    //drawImage(ImageURI,ImageSQLX,ImageSQLY,ImageSQLMultiplier,document);
-
-                                                                     */
-
-
                                                                     break;
                                                                 default:
                                                                     //insert unknown type image
@@ -2456,11 +2418,11 @@ public class GeoReportServlet extends HttpServlet {
                 // Check if the referer host matches our server host
                 if (url.getHost().equalsIgnoreCase(serverName)) {
                     redirectUrl = referer;
-                    logger.debug("Redirecting to Referer: " + redirectUrl);
+                    logger.debug("Redirecting to Referer: {}", redirectUrl);
                 }
             } catch (MalformedURLException e) {
                 // Invalid URL format, stick with fallback
-                logger.debug("Invalid URL format.  Redirecting to home: " + redirectUrl);
+                logger.debug("Invalid URL format.  Redirecting to home: {}", redirectUrl);
             }
         }
 
@@ -2515,7 +2477,7 @@ public class GeoReportServlet extends HttpServlet {
                  .forEach(path -> {
                      try {
                          Files.deleteIfExists(path);
-                         logger.debug("Deleted orphaned PDF: " + path.getFileName());
+                         logger.debug("Deleted orphaned PDF: {}", path.getFileName());
                      } catch (IOException ignored) {}
                  });
 
@@ -2617,7 +2579,7 @@ public class GeoReportServlet extends HttpServlet {
         }
 
         // 2. Close all dynamic Hikari Connection Pools
-        if (connectionPools != null && !connectionPools.isEmpty()) {
+        if (!connectionPools.isEmpty()) {
             logger.info("Closing {} database connection pools...", connectionPools.size());
 
             for (Map.Entry<String, HikariDataSource> entry : connectionPools.entrySet()) {
@@ -2657,7 +2619,7 @@ public class GeoReportServlet extends HttpServlet {
         String yRaw = null;
 
         // required URL params
-        logger.info("URL Parameters: " + req.getQueryString());
+        logger.info("URL Parameters: {}", req.getQueryString());
         try {
             if(req.getParameter("report").matches("[a-zA-Z0-9-_]+")){
                 report = req.getParameter("report");
@@ -3411,7 +3373,7 @@ public class GeoReportServlet extends HttpServlet {
             if (found) {
                 transformedSql = transformedSql.replaceFirst(nextKey, "?");
                 // Get the value from URL params, default to null if missing
-                logger.debug("nextKey: " + nextKey);
+                logger.debug("nextKey: {}", nextKey);
                 orderedParams.add(urlParams.get(nextKey));
             }
         } while (found);
@@ -3449,20 +3411,6 @@ public class GeoReportServlet extends HttpServlet {
         return null;
     }
 
-
-
-    private int getRowCount(ResultSet res){
-        int totalRows;
-        try {
-            res.last();
-            totalRows = res.getRow();
-            res.beforeFirst();
-        }
-        catch(Exception ex)  {
-            return 0;
-        }
-        return totalRows ;
-    }
 
     private void drawForeignPDFPages(String foreignDoc, String foreignDocImportPage, String foreignDocType, Document document, PdfWriter pdfwriter) throws IOException {
         PdfReader reader = null;
@@ -3530,56 +3478,6 @@ public class GeoReportServlet extends HttpServlet {
         }
     }
 
-    private void drawForeignPDFPages(String foreignDocImportPage, PdfReader reader, Document document, PdfWriter pdfwriter) {
-        int pageNo;
-        if(foreignDocImportPage.contains("*")){
-            //import all pages
-            for(pageNo = 1; pageNo <= reader.getNumberOfPages(); pageNo++){
-                drawForeignPDFPage(pageNo, document, pdfwriter, reader);
-            }
-        } else {
-            //import pages and\or page ranges
-            if(foreignDocImportPage.contains(",")){
-                //e.g. 1,2,6 or 1,2,5-6
-                //Split on ","
-                String[] splitByComma = foreignDocImportPage.split(",");
-                for (String s : splitByComma) {
-                    //check for "-"
-                    if (s.contains("-")) {
-                        //e.g. 5-6
-                        //Split on "-"
-                        String[] splitByDash = s.split("-");
-                        int importPageRangeStartNo = Integer.parseInt(splitByDash[0]);
-                        int importPageRangeEndNo = Integer.parseInt(splitByDash[1]);
-                        for(pageNo = importPageRangeStartNo; pageNo <= importPageRangeEndNo; pageNo++){
-                            drawForeignPDFPage(pageNo, document, pdfwriter, reader);
-                        }
-                    } else {
-                        //e.g. 1
-                        pageNo = Integer.parseInt(s);
-                        drawForeignPDFPage(pageNo, document, pdfwriter, reader);
-                    }
-                }
-            } else {
-                //e.g. 1 or 5-6
-                //check for "-"
-                if (foreignDocImportPage.contains("-")) {
-                    //e.g. 5-6
-                    //Split on "-"
-                    String[] splitByDash = foreignDocImportPage.split("-");
-                    int importPageRangeStartNo = Integer.parseInt(splitByDash[0]);
-                    int importPageRangeEndNo = Integer.parseInt(splitByDash[1]);
-                    for(pageNo = importPageRangeStartNo; pageNo <= importPageRangeEndNo; pageNo++){
-                        drawForeignPDFPage(pageNo, document, pdfwriter, reader);
-                    }
-                } else {
-                    //e.g. 1
-                    pageNo = Integer.parseInt(foreignDocImportPage);
-                    drawForeignPDFPage(pageNo, document, pdfwriter, reader);
-                }
-            }
-        }
-    }
 
     private void drawForeignPDFPage(int pageNo, Document document, PdfWriter pdfwriter, PdfReader reader) {
         document.setPageSize(reader.getPageSize(pageNo));
