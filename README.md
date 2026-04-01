@@ -21,7 +21,7 @@ Third party PDF documents can be inserted at any point either as defined pages, 
 
 ![Application Flow](georeports_application_flow.png)
 
-# GeoReports Administrator Manual
+# Documentation
 
-[GeoReports Administrator Manual](https://github.com/Whanganui-District-Council/georeports-documentation-admin)
+[[Documentation](https://github.com/Whanganui-District-Council/georeports/wiki))
 
